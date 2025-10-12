@@ -1,0 +1,6 @@
+langchain
+langchain-community
+chromadb
+docx2txt
+google-generativeai
+streamlit
