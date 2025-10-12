@@ -17,10 +17,10 @@ if mode == "Scenario Editor":
     uploaded_file = st.file_uploader("📤 Upload your file", type=["xlsx"])
 
     if uploaded_file:
-        os.makedirs("uploads", exist_ok=True)
-        os.makedirs("outputs", exist_ok=True)
+        os.makedirs("data/uploads", exist_ok=True)
+        os.makedirs("data/outputs", exist_ok=True)
 
-        input_path = os.path.join("uploads", uploaded_file.name)
+        input_path = os.path.join("data/uploads", uploaded_file.name)
         with open(input_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
         st.success(f"✅ File uploaded: {uploaded_file.name}")
