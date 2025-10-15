@@ -49,7 +49,7 @@ if user_input:
     with st.chat_message("assistant"):
         with st.spinner("⏳ Processing..."):
             try:
-                if mode == "Excel Editor":
+                if mode == "Scenario Editor":
                     result = process_instruction(user_input, input_path, mode="excel")
 
                     st.markdown("✅ Done! Here's what I did:")

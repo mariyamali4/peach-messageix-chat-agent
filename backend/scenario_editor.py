@@ -6,7 +6,7 @@ import google.generativeai as genai
 genai.configure(api_key=os.environ["GEMINI_API_KEY1"])
 model = genai.GenerativeModel("gemini-2.5-flash")
 
-def run_excel_agent(instruction, input_file, output_file, max_retries=1):
+def run_excel_agent(instruction, input_file, output_file, max_retries=3):
     """
     Reads Excel, gets transformation code from model, executes it safely, saves new file.
     Returns structured output for front-end.
@@ -46,13 +46,27 @@ def run_excel_agent(instruction, input_file, output_file, max_retries=1):
 
     # Safety checks
     forbidden_patterns = [
-        r"import\s", 
         r"os\.", r"sys\.", r"open\s*\(", r"subprocess",
         r"eval\s*\(", r"exec\s*\(", r"__", r"shutil", r"pathlib"
     ]
     if any(re.search(p, code, re.IGNORECASE) for p in forbidden_patterns):
         print(code)
         raise ValueError("⚠️ Unsafe code detected! Execution blocked.")
+    
+    # Whiteliseted imports
+    allowed_imports = ["import numpy", "import numpy as np", "import pandas", "import pandas as pd"]
+    import_lines = re.findall(r"^\s*import\s+[^\n]+", code, flags=re.MULTILINE)
+    for line in import_lines:
+        if not any(pkg in line for pkg in ["numpy", "pandas"]):
+            raise ValueError(f"⚠️ Unsafe import detected: '{line.strip()}' — only numpy and pandas are allowed.")
+
+    # --- Auto-inject safe imports if missing ---
+    if "import pandas" not in code:
+        logs.append("ℹ️ Auto-added: import pandas as pd")
+        code = "import pandas as pd\n" + code
+    if "import numpy" not in code:
+        logs.append("ℹ️ Auto-added: import numpy as np")
+        code = "import numpy as np\n" + code
 
     # Try executing
     for attempt in range(max_retries + 1):
