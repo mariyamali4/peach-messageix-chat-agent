@@ -2,5 +2,10 @@ langchain
 langchain-community
 chromadb
 docx2txt
+python-docx
 google-generativeai
 streamlit
+faiss-cpu
+sentence-transformers
+pypdf==4.0.0
+PyPDF2==3.0.1
