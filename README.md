@@ -4,7 +4,7 @@
 1. **Edit MESSAGEix-style scenario Excel files** using natural-language instructions.
 2. **Query supporting documentation** (e.g. messaeg_ix documentation files, current policy documents) using a robust RAG system.
 
-Built with **Streamlit**, **LangChain**, and **Google Gemini**, this demo shows how LLMs can assist climate modelers interactively.
+Built with **Streamlit**, **FAISS**, and **Google Gemini**, this demo shows how LLMs can assist climate modelers interactively.
 
 ---
 
@@ -13,7 +13,7 @@ Built with **Streamlit**, **LangChain**, and **Google Gemini**, this demo shows 
 | Mode | Description |
 |------|--------------|
 | **Scenario Editor** | Upload an Excel input file (e.g. technology cost data). Give an instruction, and the agent writes and executes Pandas code to modify the file safely, producing an updated version for download. |
-| **Document Q&A (RAG)** | Ask questions about your documentation (e.g. “what are the technologies in inv_cost sheet?”). Uses a simple docx/xlsx → chunk → embeddings → FAISS index → retriever → Gemini generator setup. |
+| **Document Q&A (RAG)** | Ask questions about your documentation (e.g. “what are the technologies in inv_cost sheet?”). Uses a simple docx/xlsx → chunks → embeddings → FAISS index → retriever → Gemini generator setup. |
 
 ---
 
@@ -57,7 +57,7 @@ project/
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/<your-username>/peach-messageix-chat-agent.git
+   git clone https://github.com/<mariyamali4>/peach-messageix-chat-agent.git
    cd peach-messageix-chat-agent
    ```
 
