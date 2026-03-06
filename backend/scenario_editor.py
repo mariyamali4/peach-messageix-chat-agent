@@ -26,10 +26,8 @@ def read_uploaded_file_data(file_path, query):
         best_sheet = sheet_names[0]
         
     print(f"Best matching sheet: {best_sheet}")
-    for sheet in sheet_names:
-        if sheet == best_sheet:
-            df = xls.parse(sheet)
-            return df, best_sheet
+    df = xls.parse(best_sheet)
+    return df, best_sheet
 
 def run_scenario_agent(instruction, input_file, uploaded, output_file, max_retries=3):
     """
