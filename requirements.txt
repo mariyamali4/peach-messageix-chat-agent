@@ -10,3 +10,4 @@ sentence-transformers
 groq
 jupyter-notebook-parser
 pyarrow
+openpyxl

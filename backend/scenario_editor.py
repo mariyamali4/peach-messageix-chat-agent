@@ -2,9 +2,13 @@ import pandas as pd
 import numpy as np
 import re
 import os
+from groq import Groq
+
+from openpyxl import load_workbook
+from openpyxl.utils.dataframe import dataframe_to_rows
+
 from backend.config.rag_config import load_rag_resources
 from backend.rag_core.retriever import retrieve_chunks
-from groq import Groq
 
 
 groq_api_key = os.environ.get("GROQ_API_KEY1")
@@ -35,13 +39,17 @@ def run_scenario_agent(instruction, input_file, uploaded, output_file, max_retri
     Returns structured output for front-end.
     Inputs:
     - instruction (str): User's instruction for Excel manipulation
-  #  - uploaded (bool): Whether file was uploaded in input
+    - uploaded (bool): Whether a file was uploaded in input
     - input_file (str): Path to input Excel file
     - output_file (str): Path to save updated Excel file
     - max_retries (int): Number of retries for code execution on failure
 
     Outputs:
-    - dict with keys: success (bool), code (str), logs (str)
+    - dict with keys: 
+        - success (bool), 
+        - code (str), 
+        - logs (str), 
+        - downloadable modified excel file saved to output_file path
     """
     
     logs = []
@@ -178,8 +186,29 @@ def run_scenario_agent(instruction, input_file, uploaded, output_file, max_retri
             if not isinstance(df_new, pd.DataFrame):
                 raise ValueError("No valid DataFrame 'df' produced.")
 
-            df_new.to_excel(output_file, index=False)
-            logs.append(f"✅ Saved updated file to {output_file}")
+            # --- Saving the edited sheet to the output Excel file, overwriting the target sheet ---
+            # 1. Loading the existing workbook
+            template_wb = load_workbook(input_file)
+            
+            # 2. Get the specific sheet (this preserves its position in the tab order)
+            if target_sheet_name in template_wb.sheetnames:
+                ws = template_wb[target_sheet_name]
+                
+                # 3. Clear the existing content (delete_rows from 1 to max_row ensures we don't leave old data behind)
+                ws.delete_rows(1, ws.max_row)
+            else:
+                # Edge case: If it's a brand new sheet, it will go to the end
+                ws = template_wb.create_sheet(title=target_sheet_name)
+
+            # 4. Write the new data into the existing sheet
+            for r in dataframe_to_rows(df_new, index=False, header=True):
+                ws.append(r)
+
+            # 5. Save the edited workbook to the output file path
+            template_wb.save(output_file)
+
+            logs.append(f"✅ Overwrote '{target_sheet_name}' and saved to {output_file}")
+
             return {"success": True, "code": code, "logs": "\n".join(logs)}
 
         except Exception as e:
