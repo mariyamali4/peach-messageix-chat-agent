@@ -4,7 +4,7 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 from backend.config.rag_config import load_rag_resources
-from backend.conv_history import init_db, new_conversation, log_turn
+from backend.conv_history import init_db, log_turn
 
 from backend.intent_detection import get_intent
 from backend.scenario_editor import run_scenario_agent
@@ -22,7 +22,7 @@ BASE_DIR = Path(__file__).resolve().parents[1]
 base_scenario_path = BASE_DIR / "data" / "docs" / "MESSAGEix-Pakistan-CurPol.xlsx"
 
 
-def orchestrate(instruction, input_file=None):
+def orchestrate(instruction, input_file=None, conv_id=None):
     print("ORCHESTRATE CALLED WITH:", repr(instruction))
 
     """
@@ -34,8 +34,10 @@ def orchestrate(instruction, input_file=None):
     uploaded = input_file is not None
     timestamp = datetime.now(PKT).strftime("%Y%m%d-%H%M%S")
 
-    # ---- conversation lifecycle ----
-    conv_id = new_conversation()
+    # Initiliase new conv_id if conv_id is not passed from app.py
+    if conv_id is None:
+        from backend.conv_history import new_conversation
+        conv_id = new_conversation()
 
     routing = get_intent(instruction)
     mode = routing["selected_agent"]

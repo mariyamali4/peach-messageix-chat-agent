@@ -31,7 +31,7 @@ def generate_answer(query, context, docTitles, llm_model_name="openai/gpt-oss-12
         Source:
         {docTitles}
 
-        Always format math notation in your response in a readable way for user. 
+        Make sure to format math notation in your response in a readable way for user. Never print unformatted math notation.
         Mention the source document titles at the end of the answer.
     """
 
