@@ -1,18 +1,26 @@
 # orchestrator_agent.py
 import os
 from datetime import datetime, timezone, timedelta
+from pathlib import Path
+
+from backend.config.rag_config import load_rag_resources
+from backend.conv_history import init_db, new_conversation, log_turn
 
 from backend.intent_detection import get_intent
 from backend.scenario_editor import run_scenario_agent
-
 from backend.rag_engine import query_rag
-from backend.conv_history import init_db, new_conversation, log_turn
 
-PKT = timezone(timedelta(hours=5))
+# Cached load: only runs once when app starts
+embedding_model, index, metadata = load_rag_resources()
 
 # Ensure DB is ready once
 init_db()
-base_scenario_path = r"D:\lums-python-programming\thesis\wit-messageix-docs\MESSAGEix-Pakistan-CurPol.xlsx"
+
+PKT = timezone(timedelta(hours=5))
+
+BASE_DIR = Path(__file__).resolve().parents[1]
+base_scenario_path = BASE_DIR / "data" / "docs" / "MESSAGEix-Pakistan-CurPol.xlsx"
+
 
 def orchestrate(instruction, input_file=None):
     print("ORCHESTRATE CALLED WITH:", repr(instruction))
@@ -44,10 +52,11 @@ def orchestrate(instruction, input_file=None):
             )
 
         result = run_scenario_agent(
-            instruction=instruction,
-            input_file=input_file,
-            uploaded=uploaded,
-            output_file=output_file
+            instruction,
+            input_file,
+            uploaded,
+            output_file,
+            embedding_model, index, metadata
         )
 
         reply = f"✅ Scenario updated: `{os.path.basename(output_file)}`"
@@ -79,7 +88,8 @@ def orchestrate(instruction, input_file=None):
 
     # ---------- RAG ----------
     elif mode == "rag":
-        reply = query_rag(instruction)
+       # reply = query_rag(instruction)
+        reply = query_rag(instruction, embedding_model, index, metadata)
 
         log_turn(
             conv_id=conv_id,

@@ -7,16 +7,14 @@ from groq import Groq
 from openpyxl import load_workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 
-from backend.config.rag_config import load_rag_resources
 from backend.rag_core.retriever import retrieve_chunks
 
 
 groq_api_key = os.environ.get("GROQ_API_KEY1")
 client = Groq(api_key = groq_api_key)
 
-embedding_model, index, metadata = load_rag_resources()
 
-def read_uploaded_file_data(file_path, query):
+def read_uploaded_file_data(file_path, query, embedding_model):
     xls = pd.ExcelFile(file_path)
     sheet_names = xls.sheet_names
     if len(sheet_names) > 1:
@@ -33,7 +31,7 @@ def read_uploaded_file_data(file_path, query):
     df = xls.parse(best_sheet)
     return df, best_sheet
 
-def run_scenario_agent(instruction, input_file, uploaded, output_file, max_retries=3):
+def run_scenario_agent(instruction, input_file, uploaded, output_file, embedding_model, index, metadata, max_retries=3):
     """
     Reads Excel, gets transformation code from model, executes it safely, saves new file.
     Returns structured output for front-end.
@@ -58,7 +56,7 @@ def run_scenario_agent(instruction, input_file, uploaded, output_file, max_retri
   #  if input_file is not None:
     if uploaded:
         logs.append(f"Using uploaded file: {input_file}")
-        df_input, target_sheet_name = read_uploaded_file_data(input_file, instruction)
+        df_input, target_sheet_name = read_uploaded_file_data(input_file, instruction, embedding_model)
         logs.append(f"🔍 Identified target sheet: '{target_sheet_name}'")
     else:
         retriever_query = f"which MESSAGEix-Pakistan-CurPol sheet has information about this query: {instruction}"

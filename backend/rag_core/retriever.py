@@ -1,24 +1,14 @@
 import faiss
-from pathlib import Path
-
-# --- configuration ---
-BASE_DIR = Path(r"D:\lums-python-programming\thesis\project")
-RAG_STORE_DIR = BASE_DIR / "rag_store"
-RAG_STORE_DIR.mkdir(exist_ok=True)
-
-INDEX_PATH = RAG_STORE_DIR / "faiss_hnsw_index.faiss"
-META_PATH  = RAG_STORE_DIR / "rag_metadata.parquet"
-EMBEDDING_MODEL = "intfloat/e5-small-v2"      # or "all-MiniLM-L6-v2"
 
 
-def retrieve_chunks(query, model, index, metadata, k=10, for_rag=False):
+def retrieve_chunks(query, embedding_model, index, metadata, k=8, for_rag=False):
     '''
     Retrieve the top-k relevant document chunks from FAISS index for a given query based on semantic similarity,
     get their metedata from metadata store, and return as a DataFrame.
     
     Inputs:
         - query (str): user query 
-        - model (str): EMBEDDING_MODEL
+        - embedding_model (str): EMBEDDING_MODEL
         - index: FAISS index, acting as vector store
         - metadata: metadata store, accompanying the FAISS index
         - k (int): no. of top similar chunks to retrieve
@@ -27,7 +17,7 @@ def retrieve_chunks(query, model, index, metadata, k=10, for_rag=False):
         - results (pd.DataFrame): top-k relevant document chunks with metadata
     '''
     
-    q_emb = model.encode([query], convert_to_numpy=True, normalize_embeddings=True)
+    q_emb = embedding_model.encode([query], convert_to_numpy=True, normalize_embeddings=True)
     faiss.normalize_L2(q_emb)
     D, I = index.search(q_emb, k)             # D -> np array of similarities, I -> indices for rows stored in metadata
     results = metadata.iloc[I[0]].copy()
