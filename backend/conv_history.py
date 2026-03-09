@@ -2,7 +2,7 @@ import sqlite3, time
 import uuid
 from pathlib import Path
 
-BASE_DIR = Path(r"D:\lums-python-programming\thesis\project")
+BASE_DIR = Path(__file__).resolve().parents[1]
 DB_PATH = BASE_DIR / "data" / "history" / "conv_history.db"
 
 # --- Initialize database once ---
