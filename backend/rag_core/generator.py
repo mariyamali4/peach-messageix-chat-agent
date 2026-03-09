@@ -31,7 +31,11 @@ def generate_answer(query, context, docTitles, llm_model_name="openai/gpt-oss-12
         Source:
         {docTitles}
 
-        Make sure to format math notation in your response in a readable way for user. Never print unformatted math notation.
+        MATHEMATICAL NOTATION RULES:
+        1. For standalone equations, wrap them in double dollar signs: $$ [equation] $$
+        2. For inline math (like variables), wrap them in single dollar signs: $x$
+        3. Use standard LaTeX syntax. Do NOT use double semicolons (;;) or unformatted text blocks.
+        4. Ensure all symbols (like n, t, y) are explained clearly after the equation.
         Mention the source document titles at the end of the answer.
     """
 
