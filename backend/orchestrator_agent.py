@@ -69,7 +69,7 @@ def orchestrate(instruction, input_file=None, conv_id=None):
         )
 
         # ---- DB LOGGING ----
-        log_turn(
+        inserted_turn_id = log_turn(
             conv_id=conv_id,
             mode=mode,
             routing_reason=routing_reason,
@@ -85,7 +85,8 @@ def orchestrate(instruction, input_file=None, conv_id=None):
             "output_file": output_file,
             "code": result.get("code"),
             "logs": result.get("logs"),
-            "timestamp": timestamp
+            "timestamp": timestamp,
+            "turn_id": inserted_turn_id
         }
 
     # ---------- RAG ----------
@@ -93,7 +94,7 @@ def orchestrate(instruction, input_file=None, conv_id=None):
        # reply = query_rag(instruction)
         reply = query_rag(instruction, embedding_model, index, metadata)
 
-        log_turn(
+        inserted_turn_id = log_turn(
             conv_id=conv_id,
             mode=mode,
             routing_reason=routing_reason,
@@ -106,7 +107,8 @@ def orchestrate(instruction, input_file=None, conv_id=None):
         return {
             "mode": mode,
             "reply": reply,
-            "timestamp": timestamp
+            "timestamp": timestamp,
+            "turn_id": inserted_turn_id
         }
 
     else:

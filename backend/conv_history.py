@@ -48,12 +48,16 @@ def log_turn(conv_id, mode, routing_reason, timestamp, query, response, output_f
     for attempt in range(5):
         try:
             with sqlite3.connect(DB_PATH, timeout=10) as conn:
-                conn.execute("""
+                cursor = conn.cursor()
+                cursor.execute("""
                     INSERT INTO conversation_history
                     (conv_id, mode, routing_reason, query, response, output_file_name, timestamp)
                     VALUES (?, ?, ?, ?, ?, ?, ?)
                 """, (conv_id, mode, routing_reason, query, response, output_file_name, timestamp))
                 conn.commit()
+                
+                inserted_turn_id = cursor.lastrowid
+                return inserted_turn_id
             break  
         except sqlite3.OperationalError as e:
             if "locked" in str(e).lower():

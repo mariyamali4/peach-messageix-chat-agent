@@ -1,10 +1,11 @@
-# app2.py
+# app.py
 import streamlit as st
 import os
 import sqlite3
 import pandas as pd
 from backend.orchestrator_agent import orchestrate
 from backend.conv_history import new_conversation
+
 
 st.set_page_config(page_title="🍑 Peach+", layout="wide")
 st.title("🍑 Peach - Message_ix Chat Agent")
@@ -36,33 +37,58 @@ if "messages" not in st.session_state:
 if "conv_id" not in st.session_state:
     st.session_state.conv_id = new_conversation()
 
+# Define DB Path
+db_path = os.path.join("data", "history", "conv_history.db") 
+
 # ---------- 1. RENDER CHAT IN CHAT TAB ----------
 with tab_chat:
     # Display previous messages
-    for msg in st.session_state.messages:
+    for i, msg in enumerate(st.session_state.messages):
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
-        # Re-render UI elements (like code blocks) if they exist in history
+            # Re-render code blocks if they exist in history
             if "code" in msg:
                 with st.expander("🤖 Generated Code"):
                     st.code(msg["code"], language="python")
+
+            # Re-draw the feedback button on page reload
+            if msg["role"] == "assistant":
+                sentiment_mapping = [":material/thumb_down:", ":material/thumb_up:"]
+                selected_feedback = st.feedback("thumbs", key=f"fb_key_{i}")
+                if selected_feedback is not None:
+                    st.markdown(f"You selected: {sentiment_mapping[selected_feedback]}")
+        
+                    # Only update DB if the rating just changed or is new
+                    if msg.get("response_feedback") != selected_feedback:
+                        st.session_state.messages[i]["response_feedback"] = selected_feedback
+                        
+                        # Update DB
+                        if os.path.exists(db_path):
+                            with sqlite3.connect(db_path) as conn:
+                                cursor = conn.cursor()
+                                if "turn_id" in msg:
+                                    cursor.execute(
+                                        "UPDATE conversation_history SET response_feedback = ? WHERE turn_id = ?",
+                                        (selected_feedback, msg["turn_id"])
+                                    )
+                                    conn.commit()
+                                    st.toast("✅ Feedback recorded!")
+                        else:
+                            st.info("DB connection not available to record feedback.")
 
 
 # ---------- 2. RENDER HISTORY IN DEBUG TAB ----------
 with tab_debug:
     st.header("🛠️ System Internals")
     
-    # --- 1. VIEW DATABASE (SQLite) ---
+    # --- 1. View Chat History (SQLite) ---
     st.subheader("📜 Conversation History (SQLite)")
-    try:        
-        db_path = os.path.join("data", "history", "conv_history.db") 
-        
+    try:                
         if os.path.exists(db_path):
-            conn = sqlite3.connect(db_path)
-            df_history = pd.read_sql_query("SELECT * FROM conversation_history", conn)
-            st.dataframe(df_history, use_container_width=True)
-            conn.close()
+            with sqlite3.connect(db_path) as conn:
+                df_history = pd.read_sql_query("SELECT * FROM conversation_history ORDER BY timestamp DESC", conn)
+                st.dataframe(df_history, use_container_width=True)
         else:
             st.info("No database file found yet. Start a chat to create one!")
     except Exception as e:
@@ -70,10 +96,9 @@ with tab_debug:
 
     st.divider()
 
-    # --- 2. VIEW SERVER FILES ---
+
+    # --- 2. VIEW SERVER FILES (Local Directories) ---
     st.subheader("📁 Files on Server")
-    
-    # Helper to list files in your key directories
     for folder in ["data/history/uploads", "data/history/outputs"]:
         st.write(f"**Folder: `{folder}`**")
         if os.path.exists(folder):
@@ -110,8 +135,17 @@ if user_input:
                     # ---------- DISPLAY ----------
                     assistant_reply = result["reply"]
                     st.markdown(assistant_reply)
-                    reply_data = {"role": "assistant", "content": assistant_reply}
+                    
+                    # turn_id for recording feedback
+                    curr_turn_id = result['turn_id']  
 
+                    reply_data = {
+                        "role": "assistant", 
+                        "content": assistant_reply,
+                        "turn_id": curr_turn_id,
+                        "response_feedback": None
+                    }
+                    
 
                     if result.get("code"):
                         with st.expander("🤖 Generated Code"):
@@ -129,6 +163,15 @@ if user_input:
                             file_name=os.path.basename(result["output_file"]),
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                         )
+                    
+                    # FEEDBACK UI
+                    current_msg_index = len(st.session_state.messages) 
+                    sentiment_mapping = [":material/thumb_down:", ":material/thumb_up:"]
+                    selected_feedback = st.feedback("thumbs", key=f"fb_key_{current_msg_index}")
+                    
+                    if selected_feedback is not None:
+                       st.markdown(f"You selected: {sentiment_mapping[selected_feedback]}")
+                    reply_data["response_feedback"] = selected_feedback 
 
                     st.session_state.messages.append(reply_data)
 
