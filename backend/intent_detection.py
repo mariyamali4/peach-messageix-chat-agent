@@ -19,10 +19,10 @@ question_words: Words indicating question/retrieval intent.
 """
 use_llm = True
 
-edit_keywords = [
-    "make", "update", "change", "modify", "edit", "replace", "rename", "filter", "delete", "drop", "add", "remove", "save", "create",
-    "format", "convert", "read", "write", "output", "double", "halve", "increase", "decrease", "multiply", "divide"
-]
+# edit_keywords = [
+#     "make", "update", "change", "modify", "edit", "replace", "rename", "filter", "delete", "drop", "add", "remove", "save", "create",
+#     "format", "convert", "read", "write", "output", "double", "halve", "increase", "decrease", "multiply", "divide"
+# ]
 excel_terms = ["excel", "sheet", "df", "dataframe", "pd", "column", "row"]
 question_words = ["what", "which", "who", "where", "when", "why", "how", "is", "are", "does", "do", 
                   "should", "could", "would", "can"]
@@ -36,7 +36,8 @@ def rule_based_route(user_input):
         text = user_input.lower().strip()
 
         # Case 1: explicit edit / manipulation
-        if any(k in text for k in edit_keywords) or any(k in text for k in excel_terms):
+       # if any(k in text for k in edit_keywords) or any(k in text for k in excel_terms):
+        if any(k in text for k in excel_terms):
             if any(text.startswith(q + " ") for q in question_words):
                 return {
                     "selected_agent": "rag",
@@ -114,8 +115,8 @@ def llm_route(user_input: str):
     
     try:
         completion = client.chat.completions.create(
-          #  model="llama-3.3-70b-versatile",
-            model="openai/gpt-oss-120b",
+          #  model="openai/gpt-oss-120b",
+            model="openai/gpt-oss-20b",
             messages=[
                 {
                     "role": "user",
@@ -151,6 +152,11 @@ def get_intent(user_input: str):
     return rule_result
 
 ## Local testing
+# import time
+# start = time.time()
 #r = get_intent("should i remove the most expensive non-renewable technology after 2030")
-# r = get_intent("how can i edit fixed cost?")
+#r = get_intent("how can i edit fixed cost?")
+# r = get_intent("list down the sheet most relevant to this investment and triple the investment in solar after 2030")
+# end = time.time()
 # print(r['selected_agent'])
+# print(f"Execution time: {end - start} seconds")

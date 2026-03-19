@@ -3,6 +3,7 @@ import streamlit as st
 import os
 import sqlite3
 import pandas as pd
+import time
 from backend.orchestrator_agent import orchestrate
 from backend.conv_history import new_conversation
 
@@ -124,6 +125,7 @@ if user_input:
             st.markdown(user_input)
 
         with st.chat_message("assistant"):
+            start_time = time.time()
             with st.spinner("⏳ Processing..."):
                 try:
                     result = orchestrate(
@@ -145,6 +147,7 @@ if user_input:
                         "turn_id": curr_turn_id,
                         "response_feedback": None
                     }
+                    end_time = time.time()
                     
 
                     if result.get("code"):
@@ -163,6 +166,9 @@ if user_input:
                             file_name=os.path.basename(result["output_file"]),
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                         )
+                    
+                    if result.get("execution_time") is not None:
+                        st.caption(f"{result['execution_time']}s")
                     
                     # FEEDBACK UI
                     current_msg_index = len(st.session_state.messages) 

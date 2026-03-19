@@ -1,6 +1,7 @@
 # orchestrator_agent.py
 import os
 from datetime import datetime, timezone, timedelta
+import time
 from pathlib import Path
 
 from backend.config.rag_config import load_rag_resources
@@ -23,14 +24,16 @@ base_scenario_path = BASE_DIR / "data" / "docs" / "MESSAGEix-Pakistan-CurPol.xls
 
 
 def orchestrate(instruction, input_file=None, conv_id=None):
-    print("ORCHESTRATE CALLED WITH:", repr(instruction))
-
     """
     Central orchestration layer:
     - intent detection
     - agent routing
     - DB logging
     """
+    start_time = time.time()
+    print("ORCHESTRATE CALLED WITH:", repr(instruction))
+
+    
     uploaded = input_file is not None
     timestamp = datetime.now(PKT).strftime("%Y%m%d-%H%M%S")
 
@@ -67,6 +70,8 @@ def orchestrate(instruction, input_file=None, conv_id=None):
             f"{reply}\n\n"
             f"Generated code:\n{result.get('code')}"
         )
+        end_time = time.time()
+        execution_time = round((end_time - start_time), 2)
 
         # ---- DB LOGGING ----
         inserted_turn_id = log_turn(
@@ -76,6 +81,7 @@ def orchestrate(instruction, input_file=None, conv_id=None):
             timestamp=timestamp,
             query=instruction,
             response=stored_reply,
+            execution_time=execution_time,
             output_file_name=os.path.basename(output_file)
         )
 
@@ -86,13 +92,16 @@ def orchestrate(instruction, input_file=None, conv_id=None):
             "code": result.get("code"),
             "logs": result.get("logs"),
             "timestamp": timestamp,
-            "turn_id": inserted_turn_id
+            "turn_id": inserted_turn_id,
+            "execution_time": execution_time
         }
 
     # ---------- RAG ----------
     elif mode == "rag":
-       # reply = query_rag(instruction)
         reply = query_rag(instruction, embedding_model, index, metadata)
+
+        end_time = time.time()
+        execution_time = round((end_time - start_time), 2)
 
         inserted_turn_id = log_turn(
             conv_id=conv_id,
@@ -101,6 +110,7 @@ def orchestrate(instruction, input_file=None, conv_id=None):
             timestamp=timestamp,
             query=instruction,
             response=reply,
+            execution_time=execution_time,
             output_file_name=None
         )
 
@@ -108,7 +118,8 @@ def orchestrate(instruction, input_file=None, conv_id=None):
             "mode": mode,
             "reply": reply,
             "timestamp": timestamp,
-            "turn_id": inserted_turn_id
+            "turn_id": inserted_turn_id,
+            "execution_time": execution_time
         }
 
     else:
