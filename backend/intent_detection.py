@@ -23,7 +23,9 @@ use_llm = True
 #     "make", "update", "change", "modify", "edit", "replace", "rename", "filter", "delete", "drop", "add", "remove", "save", "create",
 #     "format", "convert", "read", "write", "output", "double", "halve", "increase", "decrease", "multiply", "divide"
 # ]
-excel_terms = ["excel", "sheet", "df", "dataframe", "pd", "column", "row"]
+excel_terms = ["excel", 
+               "sheet", 
+               "df", "dataframe", "pd", "column", "row"]
 question_words = ["what", "which", "who", "where", "when", "why", "how", "is", "are", "does", "do", 
                   "should", "could", "would", "can"]
 

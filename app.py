@@ -3,9 +3,50 @@ import streamlit as st
 import os
 import sqlite3
 import pandas as pd
-import time
 from backend.orchestrator_agent import orchestrate
 from backend.conv_history import new_conversation
+
+def format_chat_history(raw_messages):
+    """
+    Transforms the full Streamlit UI history into a lightweight payload for the LLM.
+    Returns: 
+    - Past 2 conversation turns for context (to manage token limits)
+    - User queries, 
+    - Assistant Logs (Scenario), 
+    - Assistant Summary (RAG), 
+    - Feedback
+    """
+    formatted_history = []
+    for msg in raw_messages:
+        role = msg.get("role")
+        
+        if role == "user":
+            formatted_history.append({
+                "role": "user", 
+                "content": msg.get("content")
+            })
+            continue
+            
+        if role == "assistant":
+            context_parts = []
+            
+            feedback = msg.get("response_feedback")
+            if feedback is not None:
+                feedback_text = "Positive" if feedback == 1 else "Negative"
+                context_parts.append(feedback_text)
+
+            if msg.get("summary"):
+                context_parts.append(f"Summary of Response: {msg['summary']}")
+            elif msg.get("logs"):
+                context_parts.append(f"Execution Logs:\n{msg['logs']}")
+            else:
+                context_parts.append(f"Excerpt from the response: {msg.get('content')[:300]}")  # Truncate if no summary/logs
+            formatted_history.append({
+                "role": "assistant", 
+                "content": "\n".join(context_parts)
+            })
+            
+    return formatted_history
 
 
 st.set_page_config(page_title="🍑 Peach+", layout="wide")
@@ -125,13 +166,17 @@ if user_input:
             st.markdown(user_input)
 
         with st.chat_message("assistant"):
-            start_time = time.time()
             with st.spinner("⏳ Processing..."):
                 try:
+                    chat_length = len(st.session_state.messages[:-1])                                   # Count of previous messages except the current user input
+                    recent_raw_history = st.session_state.messages[max(0, chat_length-4):chat_length]   # Get the last 4 messages (2 user-assistant pairs) for context
+                    clean_history = format_chat_history(recent_raw_history)
+
                     result = orchestrate(
                         instruction=user_input,
                         input_file=input_path if uploaded_file else None,
-                        conv_id=st.session_state.conv_id
+                        conv_id=st.session_state.conv_id,
+                        chat_history=clean_history
                     )
 
                     # ---------- DISPLAY ----------
@@ -144,10 +189,11 @@ if user_input:
                     reply_data = {
                         "role": "assistant", 
                         "content": assistant_reply,
+                        "logs": result.get("logs") if result.get("logs") else None,
+                        "summary": result.get("summary") if result.get("summary") else None,
                         "turn_id": curr_turn_id,
                         "response_feedback": None
                     }
-                    end_time = time.time()
                     
 
                     if result.get("code"):
@@ -169,6 +215,9 @@ if user_input:
                     
                     if result.get("execution_time") is not None:
                         st.caption(f"{result['execution_time']}s")
+
+                    if result.get("summary"):
+                        reply_data["summary"] = result["summary"]
                     
                     # FEEDBACK UI
                     current_msg_index = len(st.session_state.messages) 

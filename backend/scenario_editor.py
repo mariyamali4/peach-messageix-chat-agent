@@ -32,7 +32,7 @@ def read_uploaded_file_data(file_path, query, embedding_model):
     df = xls.parse(best_sheet)
     return df, best_sheet
 
-def run_scenario_agent(instruction, input_file, uploaded, output_file, embedding_model, index, metadata, max_retries=3):
+def run_scenario_agent(instruction, chat_history, input_file, uploaded, output_file, embedding_model, index, metadata, max_retries=3):
     """
     Reads Excel, gets transformation code from model, executes it safely, saves new file.
     Returns structured output for front-end.
@@ -72,7 +72,6 @@ def run_scenario_agent(instruction, input_file, uploaded, output_file, embedding
             if sheet_name == target_sheet_name:
                 df_input = xls.parse(sheet_name)
                 break
-        #logs.append(f"🔍 Identified target sheet: '{target_sheet_name}'")
 
 
     if df_input is None:
@@ -83,8 +82,17 @@ def run_scenario_agent(instruction, input_file, uploaded, output_file, embedding
 
     # Prepare prompt
     prompt = f"""
+        `Role:`
         You are a data engineer working with climate scenario data.
-        You are given a pandas DataFrame named `df`.
+
+        `TASK`:
+        Write Python (pandas and numpy) code that applies the instruction by modifying `df` in-place.
+        
+        `Input Artifacts:`
+        - You are given a pandas DataFrame named `df`. 
+        - The schema and sample rows of `df` are provided below. 
+        - An excerpt of chat history is provided for additional context, in order to help with user's follow-up questions.
+        - If the instructions are not clear, or the required information is not available in the selected sheet, do not make assumptions, and ask the user for clarification.
 
         Schema:
         {list(df_input.columns)}
@@ -95,10 +103,11 @@ def run_scenario_agent(instruction, input_file, uploaded, output_file, embedding
         Instruction:
         {instruction}
 
-        TASK:
-        Write Python (pandas and numpy) code that applies the instruction by modifying `df` in-place.
+        History of conversation:
+        {chat_history}
 
-        LOGIC RULES (strict):
+
+        `LOGIC RULES (strict)`:
         1. Apply any temporal filters (e.g. "after 2030") BEFORE analysis.
         2. For "most/least expensive", compute the highest/lowest MEAN value unless stated otherwise.
         3. Identify technologies or categories by name/ID — NEVER by float value matching.
@@ -106,21 +115,22 @@ def run_scenario_agent(instruction, input_file, uploaded, output_file, embedding
         5. Use vectorized operations only (no loops, no `.apply`).
 
         
-        CODING RULES:
+        `CODING RULES`:
         - Modify `df` in-place using `.loc[...]`.
-        - Use `.str.contains(..., case=False, na=False)`, , not exact matches, for string filters.
+        - Use `.str.contains(..., case=False, na=False)`, instead of exact matches for string filters.
         - Preserve all rows/columns unless explicitly instructed to drop them.
         - Sort by time columns (e.g. `year`, `year_vtg`) if trends are implied.
         - Drop rows only via boolean indexing or `df.drop(...)`.    
 
         
-        FORBIDDEN:
+        `FORBIDDEN`:
         - File I/O, system calls, env access.
         - Defining functions/classes.
         - Using os, sys, pathlib, subprocess, eval, exec.
         - Any code that triggers `SettingWithCopyWarning`.
+        - Never make assumptions about the data that aren't explicitly supported by the instruction or the provided context/schema. If in doubt, ask the user for clarification instead of guessing.
 
-        OUTPUT:
+        `OUTPUT FORMAT`:
         - Return ONLY valid Python code
         - No explanations
         - No markdown

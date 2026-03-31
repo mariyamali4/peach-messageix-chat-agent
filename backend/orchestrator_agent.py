@@ -1,4 +1,4 @@
-# orchestrator_agent.py
+# orchestrator_agent2.py
 import os
 from datetime import datetime, timezone, timedelta
 import time
@@ -23,7 +23,7 @@ BASE_DIR = Path(__file__).resolve().parents[1]
 base_scenario_path = BASE_DIR / "data" / "docs" / "MESSAGEix-Pakistan-CurPol.xlsx"
 
 
-def orchestrate(instruction, input_file=None, conv_id=None):
+def orchestrate(instruction, input_file=None, conv_id=None, chat_history=None):
     """
     Central orchestration layer:
     - intent detection
@@ -58,6 +58,7 @@ def orchestrate(instruction, input_file=None, conv_id=None):
 
         result = run_scenario_agent(
             instruction,
+            chat_history,
             input_file,
             uploaded,
             output_file,
@@ -98,7 +99,10 @@ def orchestrate(instruction, input_file=None, conv_id=None):
 
     # ---------- RAG ----------
     elif mode == "rag":
-        reply = query_rag(instruction, embedding_model, index, metadata)
+        reply, summary = query_rag(instruction, 
+                                    chat_history,
+                                    embedding_model, index, metadata
+                                    )
 
         end_time = time.time()
         execution_time = round((end_time - start_time), 2)
@@ -117,6 +121,7 @@ def orchestrate(instruction, input_file=None, conv_id=None):
         return {
             "mode": mode,
             "reply": reply,
+            "summary": summary,
             "timestamp": timestamp,
             "turn_id": inserted_turn_id,
             "execution_time": execution_time
