@@ -37,9 +37,9 @@ def format_chat_history(raw_messages):
 
             if msg.get("summary"):
                 context_parts.append(f"Summary of Response: {msg['summary']}")
-            elif msg.get("logs"):
+            if msg.get("logs"):
                 context_parts.append(f"Execution Logs:\n{msg['logs']}")
-            else:
+            if (msg.get("summary") is None) and (msg.get("logs") is None):
                 context_parts.append(f"Excerpt from the response: {msg.get('content')[:300]}")  # Truncate if no summary/logs
             formatted_history.append({
                 "role": "assistant", 

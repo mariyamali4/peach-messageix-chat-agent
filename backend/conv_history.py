@@ -14,15 +14,17 @@ def init_db():
     try:
         with sqlite3.connect(DB_PATH) as conn:
             conn.execute("""
-                CREATE TABLE IF NOT EXISTS conversation_history (
+                CREATE TABLE IF NOT EXISTS conversation_history_new (
                     conv_id TEXT,
                     turn_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    mode TEXT CHECK(mode IN ('rag', 'scenario_editor')),
-                    routing_reason TEXT,
-                    query TEXT NOT NULL,
+                    mode TEXT,
+                    query TEXT NOT NULL,  
                     response TEXT,
                     output_file_name TEXT,
-                    timestamp TEXT
+                    timestamp TEXT,
+                    routing_reason TEXT,
+                    response_feedback INTEGER,
+                    execution_time REAL 
                 )
             """)
         print("✅ Conversation history database initialized.")

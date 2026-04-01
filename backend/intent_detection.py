@@ -2,7 +2,7 @@
 Intent Detection Module
 Routes user queries between 'scenario-editor' and 'rag-agent'
 based on intent classification — using a rule-based method
-with an optional LLM fallback.
+with an optional LLM fallback. Now supports 'multi' flow for sequential tasks.
 """
 import os
 import json
@@ -11,58 +11,6 @@ from groq import Groq
 groq_api_key = os.environ.get("GROQ_API_KEY1")
 client = Groq(api_key = groq_api_key)
 
-"""
-Initialize the router.
-use_llm: If True, enables LLM fallback for ambiguous cases.
-edit_keywords, excel_terms: Keywords indicating editing intent.
-question_words: Words indicating question/retrieval intent.
-"""
-use_llm = True
-
-# edit_keywords = [
-#     "make", "update", "change", "modify", "edit", "replace", "rename", "filter", "delete", "drop", "add", "remove", "save", "create",
-#     "format", "convert", "read", "write", "output", "double", "halve", "increase", "decrease", "multiply", "divide"
-# ]
-excel_terms = ["excel", 
-               "sheet", 
-               "df", "dataframe", "pd", "column", "row"]
-question_words = ["what", "which", "who", "where", "when", "why", "how", "is", "are", "does", "do", 
-                  "should", "could", "would", "can"]
-
-
-def rule_based_route(user_input):
-    """
-    Fast rule-based classification between agents.
-    """
-    if user_input:
-        text = user_input.lower().strip()
-
-        # Case 1: explicit edit / manipulation
-       # if any(k in text for k in edit_keywords) or any(k in text for k in excel_terms):
-        if any(k in text for k in excel_terms):
-            if any(text.startswith(q + " ") for q in question_words):
-                return {
-                    "selected_agent": "rag",
-                    "reason": "Question phrasing detected, likely information retrieval."
-                }
-            else:
-                return {
-                    "selected_agent": "scenario_editor",
-                    "reason": "Contains edit or Excel manipulation keywords."
-                }
-
-        # Case 2: pure question or retrieval
-        if any(text.startswith(q + " ") for q in question_words):
-            return {
-                "selected_agent": "rag",
-                "reason": "Question form indicates retrieval or explanation query."
-            }
-
-    # Fallback: assume rag
-    return {
-        "selected_agent": "rag",
-        "reason": "Defaulting to RAG agent (no edit indicators found)."
-    }
 
 
 def extract_json(text: str):
@@ -73,52 +21,65 @@ def extract_json(text: str):
     return json.loads(text)
 
 
-def llm_route(user_input: str):
+def llm_route(user_input: str, chat_history: list = None):
     """
-    LLM-based classification (fallback or enhanced reasoning).
+    LLM-based classification. 
+    Can extract sub-queries for multi-intents (RAG -> Scenario Editor).
     """
-    few_shot_prompt = f"""
-        You are an Agent Router in a multi-agent system:
-        1. scenario_editor — edits Excel data according to user instructions.
-        2. rag-agent — retrieves or explains information from a knowledge base.
+    if chat_history is None:
+        chat_history = []
 
-        
-        Examples:
+    few_shot_prompt = f"""
+        `Role:`
+        You are an Agent Router in a multi-agent system. Choose between three states:
+        1. "scenario_editor" — edits Excel data according to user instructions.
+        2. "rag" — retrieves or explains information from a knowledge base.
+        3. "multi" — User explicitly asks to BOTH retrieve information AND edit data sequentially in the same prompt.
+
+        `Examples`:
         User: formulas and variables related to fix_cost, inv_cost, var_cost
-        Output: {{"selected_agent": "rag", "reason": "User is asking for information, not editing data."}}
+        Output: {{"selected_agent": "rag", "reason": "User is asking for information.", "sub_queries": null}}
 
         User: make the inv_cost half
-        Output: {{"selected_agent": "scenario_editor", "reason": "User is modifying Excel data values."}}
+        Output: {{"selected_agent": "scenario_editor", "reason": "User is modifying Excel data values.", "sub_queries": null}}
 
         User: "rename the column 'investment_cost' to 'inv_cost' and save the file"
-        Output: {{"selected_agent": "scenario_editor", "reason": " Explicit data transformation, so use the scenario-editor agent."}}
+        Output: {{"selected_agent": "scenario_editor", "reason": "Explicit data transformation.", "sub_queries": null}}
 
-        User: "read the inv_cost sheet, format the data into a pd dataframe, and double the solar value. give the output in form of an excel file, with the relevant changes saved"
-        Output: {{"selected_agent": "scenario_editor", "reason": "This requires reading, editing, and writing Excel data, so use the scenario-editor agent."}}
+        User: "what is the current solar investment cost? find it and then double it"
+        Output: {{"selected_agent": "multi", "reason": "Requires finding information first, then editing it.", "sub_queries": {{"rag_query": "what is the current solar investment cost?", "scenario_query": "double the solar investment cost"}}}}
 
-        User: "should i edit the expensive technologies after 2050 to reduce costs?"
-        Output: {{"selected_agent": "rag", "reason": "The query is asking for information, not editing data."}}
+        User: "how much does wind cost? actually, just halve it in the sheet"
+        Output: {{"selected_agent": "multi", "reason": "User asks for a value and also requests to modify it.", "sub_queries": {{"rag_query": "how much does wind cost?", "scenario_query": "halve the wind cost in the sheet"}}}}
 
         User: "which technology is historically the cheapest?"
         Output: {{"selected_agent": "rag", "reason": "User is asking for information."}}
 
-        User: "how can i change inv_cost?"
-        Output: {{"selected_agent": "rag", "reason": "User is asking for information, not giving direct edit instructions."}}
+        User: "should i edit the expensive technologies after 2050 to reduce costs?"
+        Output: {{"selected_agent": "rag", "reason": "Asking for advice/information, not giving an edit command.", "sub_queries": null}}
 
-        Decide which agent should handle the given input: {user_input}. 
+        `Task`
+        Decide which agent should handle the given input: "{user_input}".
+        Recent Chat History (for context/pronoun resolution): {chat_history}
 
-        In case of questions, pay attention to whether the user is seeking information (rag-agent),
-        or requesting data edits (scenario-editor).
+        `Output format` 
+        STRICTLY as JSON:
+        If single intent (rag OR scenario_editor):
+        {{"selected_agent": "<agent_name>", "reason": "<short explanation>", "sub_queries": null}}
 
-        Output format STRICTLY as JSON:
-        {{"selected_agent": "rag" or "scenario_editor", 
-         "reason": "<short explanation>"}}
+        If multi-intent (BOTH information retrieval AND data editing):
+        {{"selected_agent": "multi", 
+         "reason": "<short explanation>",
+         "sub_queries": {{
+             "rag": "<the retrieval part of the prompt>",
+             "scenario": "<the data editing part of the prompt>"
+         }}
+        }}
     """
     
     try:
         completion = client.chat.completions.create(
-          #  model="openai/gpt-oss-120b",
-            model="openai/gpt-oss-20b",
+            model="openai/gpt-oss-20b", # May bump to 70b if parsing sub_queries gets complex
             messages=[
                 {
                     "role": "user",
@@ -128,37 +89,38 @@ def llm_route(user_input: str):
         )
         resp = completion.choices[0].message.content.strip()
         parsed = extract_json(resp)
+        
+        # Safety fallback if LLM forgets the sub_queries key
+        if "sub_queries" not in parsed:
+            parsed["sub_queries"] = None
+            
         return parsed
     except Exception as e:
         print(f"[Router Warning] LLM routing failed: {e}")
         return None
 
 
-def get_intent(user_input: str):
+
+def get_intent(user_input, chat_history = None):
     print("Checking intent...")
     """
-    Route a user input to the appropriate sub-agent.
-    Automatically uses LLM fallback if enabled and available.
+    Route a user input to the appropriate sub-agent, using an LLM
     """
-    rule_result = rule_based_route(user_input)
-    print(f"Rule-based result: {rule_result}")
+    llm_result = llm_route(user_input, chat_history)
+    print(llm_result)
+    return llm_result
 
-    # If LLM mode is active, only invoke for uncertain or generic retrieval cases
-    if use_llm and rule_result["selected_agent"] == "rag":
-        print('Routing to LLM')
-        llm_result = llm_route(user_input)
-        print(llm_result)
-        if llm_result:
-            return llm_result
 
-    return rule_result
 
 ## Local testing
 # import time
 # start = time.time()
-#r = get_intent("should i remove the most expensive non-renewable technology after 2030")
-#r = get_intent("how can i edit fixed cost?")
-# r = get_intent("list down the sheet most relevant to this investment and triple the investment in solar after 2030")
+# #r = get_intent("what is the cost of solar? find it and double it in the sheet", 
+# r = get_intent("double the cost of wind if it's less than that", 
+#                chat_history=[
+#                     {"role": "user", "content": "what is the current solar investment cost?"},
+#                     {"role": "system", "content": "$123"}
+#                 ])
 # end = time.time()
-# print(r['selected_agent'])
+# print(json.dumps(r, indent=2))
 # print(f"Execution time: {end - start} seconds")
