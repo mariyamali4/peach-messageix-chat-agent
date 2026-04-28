@@ -1,4 +1,4 @@
-# orchestrator_agent2.py
+# orchestrator_agent.py
 import os
 from datetime import datetime, timezone, timedelta
 import time
@@ -10,6 +10,7 @@ from backend.conv_history import init_db, log_turn
 from backend.intent_detection import get_intent
 from backend.scenario_editor import run_scenario_agent
 from backend.rag_engine import query_rag
+from backend.run_msg_model import solve_message_scenario
 
 # Cached load: only runs once when app starts
 embedding_model, index, metadata = load_rag_resources()
@@ -21,7 +22,7 @@ PKT = timezone(timedelta(hours=5))
 BASE_DIR = Path(__file__).resolve().parents[1]
 base_scenario_path = BASE_DIR / "data" / "docs" / "MESSAGEix-Pakistan-CurPol.xlsx"
 
-def orchestrate(instruction, input_file=None, conv_id=None, chat_history=None):
+def orchestrate(instruction, input_file=None, input_file2=None, conv_id=None, chat_history=None):
     """
     Central orchestration layer:
     - intent detection
@@ -40,7 +41,6 @@ def orchestrate(instruction, input_file=None, conv_id=None, chat_history=None):
         conv_id = new_conversation()
 
     routing = get_intent(instruction, chat_history)
-   # mode = routing.get("selected_agent", "rag")  
     mode = routing.get("selected_agent")    
     routing_reason = routing.get("reason", "")      
 
@@ -75,6 +75,36 @@ def orchestrate(instruction, input_file=None, conv_id=None, chat_history=None):
                                    chat_history, 
                                    embedding_model, index, metadata
                                    )
+        
+
+    # ---------- RUN Model ----------
+    elif mode == "run_model":
+        if input_file2 is None:
+            input_file2 = base_scenario_path
+            print("No input file provided for model run, using default:", input_file2)
+        output_file2 = os.path.join(
+                "data/history/scenario_outputs",
+                os.path.basename(input_file2).replace(".xlsx", f"-updated-{timestamp}.xlsx")
+                )        
+        
+        result = solve_message_scenario(
+            input_file2,
+            output_file2
+            # chat_history
+        )
+        success = result.get("success", False)
+        obj_val = result.get("objective_value", None)
+
+        if success:
+            print("\n\nModel solved successfully! Objective value:", obj_val)
+            reply = f"""
+            Model Solved Successfully! \n
+            Objective Value: {obj_val}\n
+            Solved Scenario File: `{os.path.basename(output_file2)}`
+            """
+        else:
+            reply = f"❌ Model run failed. Check logs for details."
+
 
     # ---------- MULTI-INTENT (RAG -> SCENARIO) ----------
     elif mode == "multi":
@@ -120,6 +150,8 @@ def orchestrate(instruction, input_file=None, conv_id=None, chat_history=None):
     stored_reply = reply
     if code:
         stored_reply += f"\n\nGenerated code:\n{code}"
+    
+    saved_output_file = output_file if mode == "scenario_editor" else (output_file2 if mode == "run_model" else None)
 
     inserted_turn_id = log_turn(
         conv_id=conv_id,
@@ -129,14 +161,14 @@ def orchestrate(instruction, input_file=None, conv_id=None, chat_history=None):
         query=instruction,
         response=stored_reply,
         execution_time=execution_time,
-        output_file_name=os.path.basename(output_file) if output_file else None
+        output_file_name=os.path.basename(saved_output_file) if saved_output_file else None
     )
 
     return {
         "mode": mode,
         "reply": reply,
         "summary": summary if summary else None,
-        "output_file": output_file,
+        "output_file": saved_output_file if saved_output_file else None,
         "code": code if code else None,
         "logs": logs if logs else None,
         "timestamp": timestamp,

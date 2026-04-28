@@ -35,6 +35,7 @@ def llm_route(user_input: str, chat_history: list = None):
         1. "scenario_editor" — edits Excel data according to user instructions.
         2. "rag" — retrieves or explains information from a knowledge base.
         3. "multi" — User explicitly asks to BOTH retrieve information AND edit data sequentially in the same prompt.
+        4. "run_model" — User explicitly asks to run the model with the current scenario data, or solve the uploaded scenario.
 
         `Examples`:
         User: formulas and variables related to fix_cost, inv_cost, var_cost
@@ -57,6 +58,12 @@ def llm_route(user_input: str, chat_history: list = None):
 
         User: "should i edit the expensive technologies after 2050 to reduce costs?"
         Output: {{"selected_agent": "rag", "reason": "Asking for advice/information, not giving an edit command.", "sub_queries": null}}
+
+        User: "solve this scenario"
+        Output: {{"selected_agent": "run_model", "reason": "User wants to solve the scenario using message_ix model.", "sub_queries": null}}
+
+        User: "run the model with the current scenario data"
+        Output: {{"selected_agent": "run_model", "reason": "User wants to execute the model.", "sub_queries": null}}
 
         `Task`
         Decide which agent should handle the given input: "{user_input}".
@@ -112,15 +119,16 @@ def get_intent(user_input, chat_history = None):
 
 
 
-## Local testing
+# Local testing
 # import time
 # start = time.time()
 # #r = get_intent("what is the cost of solar? find it and double it in the sheet", 
-# r = get_intent("double the cost of wind if it's less than that", 
-#                chat_history=[
-#                     {"role": "user", "content": "what is the current solar investment cost?"},
-#                     {"role": "system", "content": "$123"}
-#                 ])
+# r = get_intent("solve this scenario") 
+# # r = get_intent("double the cost of wind if it's less than that", 
+# #                chat_history=[
+# #                     {"role": "user", "content": "what is the current solar investment cost?"},
+# #                     {"role": "system", "content": "$123"}
+# #                 ])
 # end = time.time()
 # print(json.dumps(r, indent=2))
 # print(f"Execution time: {end - start} seconds")

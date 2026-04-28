@@ -80,7 +80,6 @@ def run_scenario_agent(instruction, chat_history, input_file, uploaded, output_f
     logs.append("📄 Loaded Excel file successfully.")
     logs.append(f"Columns: {list(df_input.columns)}")
 
-    # Prepare prompt
     prompt = f"""
         `Role:`
         You are a data engineer working with climate scenario data.

@@ -56,8 +56,9 @@ st.title("🍑 Peach - Message_ix Chat Agent")
 tab_chat, tab_debug = st.tabs(["💬 Chat", "🛠️ Debug Dashboard"])
 
 with st.sidebar:
-    st.header("Scenario Settings")
+    st.header("Uploads")
     uploaded_file = st.file_uploader("📤 Upload scenario Excel file", type=["xlsx"])
+    uploaded_file2 = st.file_uploader("📤 Upload scenario MESSAGEix file", type=["xlsx"])
     input_file_path, uploaded = None, False
 
     if uploaded_file:
@@ -69,6 +70,16 @@ with st.sidebar:
         with open(input_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
         st.success(f"✅ File uploaded: {uploaded_file.name}")
+
+    if uploaded_file2:
+        uploaded = True
+        os.makedirs("data/history/scenario_uploads", exist_ok=True)
+        os.makedirs("data/history/scenario_outputs", exist_ok=True)
+
+        input_path2 = os.path.join("data/history/scenario_uploads", uploaded_file2.name)
+        with open(input_path2, "wb") as f:
+            f.write(uploaded_file2.getbuffer())
+        st.success(f"✅ File uploaded: {uploaded_file2.name}")
 
 # ---------- SESSION SETUP ----------
 # Chat Memory
@@ -141,7 +152,7 @@ with tab_debug:
 
     # --- 2. VIEW SERVER FILES (Local Directories) ---
     st.subheader("📁 Files on Server")
-    for folder in ["data/history/uploads", "data/history/outputs"]:
+    for folder in ["data/history/uploads", "data/history/outputs", "data/history/scenario_uploads", "data/history/scenario_outputs"]:
         st.write(f"**Folder: `{folder}`**")
         if os.path.exists(folder):
             files = os.listdir(folder)
@@ -175,6 +186,7 @@ if user_input:
                     result = orchestrate(
                         instruction=user_input,
                         input_file=input_path if uploaded_file else None,
+                        input_file2=input_path2 if uploaded_file2 else None,
                         conv_id=st.session_state.conv_id,
                         chat_history=clean_history
                     )

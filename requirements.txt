@@ -11,3 +11,6 @@ groq
 jupyter-notebook-parser
 pyarrow
 openpyxl
+message-ix
+gamspy_base
+gamsapi
