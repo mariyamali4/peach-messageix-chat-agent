@@ -63,20 +63,20 @@ with st.sidebar:
 
     if uploaded_file:
         uploaded = True
-        os.makedirs("data/history/uploads", exist_ok=True)
-        os.makedirs("data/history/outputs", exist_ok=True)
+        os.makedirs("data/history/scenario_editor_uploads", exist_ok=True)
+        os.makedirs("data/history/scenario_editor_outputs", exist_ok=True)
 
-        input_path = os.path.join("data/history/uploads", uploaded_file.name)
+        input_path = os.path.join("data/history/scenario_editor_uploads", uploaded_file.name)
         with open(input_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
         st.success(f"✅ File uploaded: {uploaded_file.name}")
 
     if uploaded_file2:
         uploaded = True
-        os.makedirs("data/history/scenario_uploads", exist_ok=True)
-        os.makedirs("data/history/scenario_outputs", exist_ok=True)
+        os.makedirs("data/history/msg_scenario_uploads", exist_ok=True)
+        os.makedirs("data/history/msg_scenario_outputs", exist_ok=True)
 
-        input_path2 = os.path.join("data/history/scenario_uploads", uploaded_file2.name)
+        input_path2 = os.path.join("data/history/msg_scenario_uploads", uploaded_file2.name)
         with open(input_path2, "wb") as f:
             f.write(uploaded_file2.getbuffer())
         st.success(f"✅ File uploaded: {uploaded_file2.name}")
@@ -152,7 +152,7 @@ with tab_debug:
 
     # --- 2. VIEW SERVER FILES (Local Directories) ---
     st.subheader("📁 Files on Server")
-    for folder in ["data/history/uploads", "data/history/outputs", "data/history/scenario_uploads", "data/history/scenario_outputs"]:
+    for folder in ["data/history/scenario_editor_uploads", "data/history/scenario_editor_outputs", "data/history/msg_scenario_uploads", "data/history/msg_scenario_outputs"]:
         st.write(f"**Folder: `{folder}`**")
         if os.path.exists(folder):
             files = os.listdir(folder)

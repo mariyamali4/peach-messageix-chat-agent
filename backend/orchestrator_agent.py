@@ -52,7 +52,7 @@ def orchestrate(instruction, input_file=None, input_file2=None, conv_id=None, ch
         if input_file is None:
             input_file = base_scenario_path
         output_file = os.path.join(
-                "data/history/outputs",
+                "data/history/scenario_editor_outputs",
                 os.path.basename(input_file).replace(".xlsx", f"-updated-{timestamp}.xlsx")
                 )        
         
@@ -84,7 +84,7 @@ def orchestrate(instruction, input_file=None, input_file2=None, conv_id=None, ch
             input_file2 = base_scenario_path
             print("No input file provided for model run, using default:", input_file2)
         output_file2 = os.path.join(
-                "data/history/scenario_outputs",
+                "data/history/msg_scenario_outputs",
                 os.path.basename(input_file2).replace(".xlsx", f"-updated-{timestamp}.xlsx")
                 )        
         
@@ -115,7 +115,7 @@ def orchestrate(instruction, input_file=None, input_file2=None, conv_id=None, ch
         
         input_file = input_file or base_scenario_path
         output_file = os.path.join(
-                "data/history/outputs",
+                "data/history/scenario_editor_outputs",
                 os.path.basename(input_file).replace(".xlsx", f"-updated-{timestamp}.xlsx")
             )
 
