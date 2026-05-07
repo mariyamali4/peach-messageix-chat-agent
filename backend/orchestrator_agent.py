@@ -68,6 +68,7 @@ def orchestrate(instruction, input_file=None, input_file2=None, conv_id=None, ch
         reply = f"✅ Scenario updated: `{os.path.basename(output_file)}`"
         code = result.get("code")
         logs = result.get("logs")
+        scenario_execution_retries_count = result.get("retries", 0)
 
     # ---------- RAG ----------
     elif mode == "rag":
@@ -136,6 +137,7 @@ def orchestrate(instruction, input_file=None, input_file2=None, conv_id=None, ch
         reply = f"**Information Found:**\n{rag_reply}\n\n**Action Taken:**\n✅ Scenario updated: `{os.path.basename(output_file)}`"
         code = result.get("code")
         logs = result.get("logs")
+        scenario_execution_retries_count = result.get("retries", 0)
 
     else:
         raise ValueError(f"Unknown agent mode: {mode}")
@@ -161,6 +163,7 @@ def orchestrate(instruction, input_file=None, input_file2=None, conv_id=None, ch
         query=instruction,
         response=stored_reply,
         execution_time=execution_time,
+        scenario_execution_retries_count=scenario_execution_retries_count if scenario_execution_retries_count else 0,
         output_file_name=os.path.basename(saved_output_file) if saved_output_file else None
     )
 

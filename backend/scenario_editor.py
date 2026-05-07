@@ -217,7 +217,8 @@ def run_scenario_agent(instruction, chat_history, input_file, uploaded, output_f
 
             logs.append(f"✅ Overwrote '{target_sheet_name}' and saved to {output_file}")
 
-            return {"success": True, "code": code, "logs": "\n".join(logs)}
+           # return {"success": True, "code": code, "logs": "\n".join(logs)}
+            return {"success": False, "code": code, "logs": "\n".join(logs), "retries": attempt}
 
         except Exception as e:
             logs.append(f"❌ Error executing code: {e}")
@@ -225,4 +226,5 @@ def run_scenario_agent(instruction, chat_history, input_file, uploaded, output_f
                 logs.append("🔁 Retrying with fix...")
                 code = generate_code(extra_context=str(e))
             else:
-                return {"success": False, "code": code, "logs": "\n".join(logs)}
+              #  return {"success": False, "code": code, "logs": "\n".join(logs)}
+                return {"success": False, "code": code, "logs": "\n".join(logs), "retries": attempt}

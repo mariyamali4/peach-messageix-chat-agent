@@ -32,7 +32,7 @@ def init_db():
         print("❌ Error initializing database:", e)
 
 
-def log_turn(conv_id, mode, routing_reason, timestamp, query, response, execution_time, output_file_name=None):
+def log_turn(conv_id, mode, routing_reason, timestamp, query, response, execution_time, scenario_execution_retries_count, output_file_name=None):
     ''' 
     Log a single turn in the conversation history.
     Inputs:
@@ -53,9 +53,9 @@ def log_turn(conv_id, mode, routing_reason, timestamp, query, response, executio
                 cursor = conn.cursor()
                 cursor.execute("""
                     INSERT INTO conversation_history
-                    (conv_id, mode, routing_reason, query, response, output_file_name, timestamp, execution_time)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """, (conv_id, mode, routing_reason, query, response, output_file_name, timestamp, execution_time))
+                    (conv_id, mode, routing_reason, query, response, output_file_name, timestamp, execution_time, scenario_execution_retries_count)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (conv_id, mode, routing_reason, query, response, output_file_name, timestamp, execution_time, scenario_execution_retries_count))
                 conn.commit()
                 
                 inserted_turn_id = cursor.lastrowid

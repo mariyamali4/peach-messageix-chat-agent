@@ -1,5 +1,7 @@
+#run_msg_model.py
 import os
 import importlib.util
+import tempfile # For inserting logs in runtime - PENDING
 
 def solve_message_scenario(scenario_path, output_path):
     """
@@ -16,6 +18,9 @@ def solve_message_scenario(scenario_path, output_path):
         os.environ["PATH"] = gams_dir + os.pathsep + os.environ.get("PATH", "")
         os.environ["GAMS_PATH"] = gams_dir
         os.environ["GAMSDIR"] = gams_dir
+    
+    with tempfile.TemporaryDirectory() as temp_dir:
+        log_path = os.path.join(temp_dir, "gams_output.log")
 
     import ixmp
     import message_ix
