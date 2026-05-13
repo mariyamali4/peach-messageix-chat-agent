@@ -35,7 +35,8 @@ def llm_route(user_input: str, chat_history: list = None):
         1. "scenario_editor" — edits Excel data according to user instructions.
         2. "rag" — retrieves or explains information from a knowledge base.
         3. "multi" — User explicitly asks to BOTH retrieve information AND edit data sequentially in the same prompt.
-        4. "run_model" — User explicitly asks to run the model with the current scenario data, or solve the uploaded scenario.
+        4. "analysis" - User asks you questions related to analysing or explaining a message scenario or an IAM scenario.
+        5. "run_model" — User explicitly asks to run the model with the current scenario data, or solve the uploaded scenario.
 
         `Examples`:
         User: formulas and variables related to fix_cost, inv_cost, var_cost
@@ -58,6 +59,12 @@ def llm_route(user_input: str, chat_history: list = None):
 
         User: "should i edit the expensive technologies after 2050 to reduce costs?"
         Output: {{"selected_agent": "rag", "reason": "Asking for advice/information, not giving an edit command.", "sub_queries": null}}
+
+        User: "explain this scenario"
+        Output: {{"selected_agent": "analysis", "reason": "User wants to get explanation about a message_ix scenario.", "sub_queries": null}}
+
+        User: "analyse the uploaded scenario for me"
+        Output: {{"selected_agent": "analysis", "reason": "User wants to get analysis of a message_ix scenario.", "sub_queries": null}}
 
         User: "solve this scenario"
         Output: {{"selected_agent": "run_model", "reason": "User wants to solve the scenario using message_ix model.", "sub_queries": null}}

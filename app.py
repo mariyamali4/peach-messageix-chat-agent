@@ -57,8 +57,10 @@ tab_chat, tab_debug = st.tabs(["💬 Chat", "🛠️ Debug Dashboard"])
 
 with st.sidebar:
     st.header("Uploads")
+   # uploaded_file = st.file_uploader("📤 Upload scenario Excel file", type=["xlsx"], accept_multiple_files=True)
     uploaded_file = st.file_uploader("📤 Upload scenario Excel file", type=["xlsx"])
-    uploaded_file2 = st.file_uploader("📤 Upload scenario MESSAGEix file", type=["xlsx"])
+
+  #  uploaded_file2 = st.file_uploader("📤 Upload scenario MESSAGEix file", type=["xlsx"])
     input_file_path, uploaded = None, False
 
     if uploaded_file:
@@ -66,20 +68,47 @@ with st.sidebar:
         os.makedirs("data/history/scenario_editor_uploads", exist_ok=True)
         os.makedirs("data/history/scenario_editor_outputs", exist_ok=True)
 
-        input_path = os.path.join("data/history/scenario_editor_uploads", uploaded_file.name)
+        input_path = os.path.join("data/history/scenario_uploads", uploaded_file.name)
         with open(input_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
         st.success(f"✅ File uploaded: {uploaded_file.name}")
 
-    if uploaded_file2:
-        uploaded = True
-        os.makedirs("data/history/msg_scenario_uploads", exist_ok=True)
-        os.makedirs("data/history/msg_scenario_outputs", exist_ok=True)
+    # if uploaded_file2:
+    #     uploaded = True
+    #     os.makedirs("data/history/msg_scenario_uploads", exist_ok=True)
+    #     os.makedirs("data/history/msg_scenario_outputs", exist_ok=True)
 
-        input_path2 = os.path.join("data/history/msg_scenario_uploads", uploaded_file2.name)
-        with open(input_path2, "wb") as f:
-            f.write(uploaded_file2.getbuffer())
-        st.success(f"✅ File uploaded: {uploaded_file2.name}")
+    #     input_path2 = os.path.join("data/history/msg_scenario_uploads", uploaded_file2.name)
+    #     with open(input_path2, "wb") as f:
+    #         f.write(uploaded_file2.getbuffer())
+    #     st.success(f"✅ File uploaded: {uploaded_file2.name}")
+
+
+    show_plots = st.sidebar.checkbox("Show Analytics Plots Options")
+    plots = [
+        'ALL',
+        'emission kyto gases',
+        'electricity generation mix',
+        'final energy industry',
+        'final energy residential commercial',
+        'final energy transportation',
+        'installed electricity capacity',
+        'co2 emission by energy supply',
+        'emissions by pollutant energy',
+        'emissions by pollutant industrial processes',
+        'emissions by pollutant waste',
+        'total energy by fuel',
+        'primary energy mix',
+        'trade primary energy volumes',
+        'trade secondary energy volumes'
+        'resource extraction'
+    ]
+    if show_plots:
+        plot_options = st.sidebar.multiselect(
+            'Which plots do you want to draw?',
+            plots
+        )
+        'Selected Plots: ', plot_options
 
 # ---------- SESSION SETUP ----------
 # Chat Memory
@@ -186,7 +215,6 @@ if user_input:
                     result = orchestrate(
                         instruction=user_input,
                         input_file=input_path if uploaded_file else None,
-                        input_file2=input_path2 if uploaded_file2 else None,
                         conv_id=st.session_state.conv_id,
                         chat_history=clean_history
                     )

@@ -10,6 +10,7 @@ from backend.conv_history import init_db, log_turn
 from backend.intent_detection import get_intent
 from backend.scenario_editor import run_scenario_agent
 from backend.rag_engine import query_rag
+from backend.analysis_agent import generate_analysis
 from backend.run_msg_model import solve_message_scenario
 
 # Cached load: only runs once when app starts
@@ -22,7 +23,7 @@ PKT = timezone(timedelta(hours=5))
 BASE_DIR = Path(__file__).resolve().parents[1]
 base_scenario_path = BASE_DIR / "data" / "docs" / "MESSAGEix-Pakistan-CurPol.xlsx"
 
-def orchestrate(instruction, input_file=None, input_file2=None, conv_id=None, chat_history=None):
+def orchestrate(instruction, input_file=None, conv_id=None, chat_history=None):
     """
     Central orchestration layer:
     - intent detection
@@ -34,6 +35,7 @@ def orchestrate(instruction, input_file=None, input_file2=None, conv_id=None, ch
 
     uploaded = input_file is not None
     timestamp = datetime.now(PKT).strftime("%Y%m%d-%H%M%S")
+    scenario_execution_retries_count = 0
 
     # Initiliase new conv_id if conv_id is not passed from app.py
     if conv_id is None:
@@ -68,7 +70,7 @@ def orchestrate(instruction, input_file=None, input_file2=None, conv_id=None, ch
         reply = f"✅ Scenario updated: `{os.path.basename(output_file)}`"
         code = result.get("code")
         logs = result.get("logs")
-        scenario_execution_retries_count = result.get("retries", 0)
+        scenario_execution_retries_count = result.get("retries") if result.get("retries") else 0
 
     # ---------- RAG ----------
     elif mode == "rag":
@@ -77,20 +79,31 @@ def orchestrate(instruction, input_file=None, input_file2=None, conv_id=None, ch
                                    embedding_model, index, metadata
                                    )
         
+    # ---------- ANALYSIS ----------
+    elif mode == "analysis":
+        if input_file is None:
+            reply = "No file attached for analysis"
+        else:
+            reply, summary = generate_analysis(instruction, 
+                                   chat_history, 
+                                   #embedding_model, index, metadata
+                                   input_file
+                                )
+        
 
     # ---------- RUN Model ----------
     elif mode == "run_model":
-        if input_file2 is None:
-            input_file2 = base_scenario_path
-            print("No input file provided for model run, using default:", input_file2)
-        output_file2 = os.path.join(
+        if input_file is None:
+            input_file = base_scenario_path
+            print("No input file provided for model run, using default:", input_file)
+        output_file = os.path.join(
                 "data/history/msg_scenario_outputs",
-                os.path.basename(input_file2).replace(".xlsx", f"-updated-{timestamp}.xlsx")
+                os.path.basename(input_file).replace(".xlsx", f"-updated-{timestamp}.xlsx")
                 )        
         
         result = solve_message_scenario(
-            input_file2,
-            output_file2
+            input_file,
+            output_file
             # chat_history
         )
         success = result.get("success", False)
@@ -101,7 +114,7 @@ def orchestrate(instruction, input_file=None, input_file2=None, conv_id=None, ch
             reply = f"""
             Model Solved Successfully! \n
             Objective Value: {obj_val}\n
-            Solved Scenario File: `{os.path.basename(output_file2)}`
+            Solved Scenario File: `{os.path.basename(output_file)}`
             """
         else:
             reply = f"❌ Model run failed. Check logs for details."
@@ -153,7 +166,6 @@ def orchestrate(instruction, input_file=None, input_file2=None, conv_id=None, ch
     if code:
         stored_reply += f"\n\nGenerated code:\n{code}"
     
-    saved_output_file = output_file if mode == "scenario_editor" else (output_file2 if mode == "run_model" else None)
 
     inserted_turn_id = log_turn(
         conv_id=conv_id,
@@ -164,14 +176,14 @@ def orchestrate(instruction, input_file=None, input_file2=None, conv_id=None, ch
         response=stored_reply,
         execution_time=execution_time,
         scenario_execution_retries_count=scenario_execution_retries_count if scenario_execution_retries_count else 0,
-        output_file_name=os.path.basename(saved_output_file) if saved_output_file else None
+        output_file_name=os.path.basename(output_file) if output_file else None
     )
 
     return {
         "mode": mode,
         "reply": reply,
         "summary": summary if summary else None,
-        "output_file": saved_output_file if saved_output_file else None,
+        "output_file": output_file if output_file else None,
         "code": code if code else None,
         "logs": logs if logs else None,
         "timestamp": timestamp,
