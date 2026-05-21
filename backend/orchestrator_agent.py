@@ -1,4 +1,4 @@
-# orchestrator_agent.py
+# orchestrator_agent2.py
 import os
 from datetime import datetime, timezone, timedelta
 import time
@@ -23,7 +23,7 @@ PKT = timezone(timedelta(hours=5))
 BASE_DIR = Path(__file__).resolve().parents[1]
 base_scenario_path = BASE_DIR / "data" / "docs" / "MESSAGEix-Pakistan-CurPol.xlsx"
 
-def orchestrate(instruction, input_file=None, conv_id=None, chat_history=None):
+def orchestrate(instruction, input_file=None, conv_id=None, chat_history=None, pipeline_start_time=0.0):
     """
     Central orchestration layer:
     - intent detection
@@ -35,7 +35,7 @@ def orchestrate(instruction, input_file=None, conv_id=None, chat_history=None):
 
     uploaded = input_file is not None
     timestamp = datetime.now(PKT).strftime("%Y%m%d-%H%M%S")
-    scenario_execution_retries_count = 0
+    code_execution_retries_count = 0
 
     # Initiliase new conv_id if conv_id is not passed from app.py
     if conv_id is None:
@@ -70,25 +70,35 @@ def orchestrate(instruction, input_file=None, conv_id=None, chat_history=None):
         reply = f"✅ Scenario updated: `{os.path.basename(output_file)}`"
         code = result.get("code")
         logs = result.get("logs")
-        scenario_execution_retries_count = result.get("retries") if result.get("retries") else 0
+        error_flag = result.get("success", 0)
+        agent_execution_time = result.get("agent_execution_time", None)
+        code_execution_retries_count = result.get("retries") if result.get("retries") else 0
 
     # ---------- RAG ----------
     elif mode == "rag":
-        reply, summary = query_rag(instruction, 
-                                   chat_history, 
-                                   embedding_model, index, metadata
-                                   )
+        result = query_rag(instruction, 
+                            chat_history, 
+                            embedding_model, index, metadata
+                            )
+        reply = result.get("reply", "")
+        summary = result.get("summary", "")
+        error_flag = result.get("success", 0)
+        agent_execution_time = result.get("agent_execution_time", None)
+        
         
     # ---------- ANALYSIS ----------
     elif mode == "analysis":
         if input_file is None:
             reply = "No file attached for analysis"
         else:
-            reply, summary = generate_analysis(instruction, 
+            result = generate_analysis(instruction, 
                                    chat_history, 
-                                   #embedding_model, index, metadata
                                    input_file
                                 )
+            reply = result.get("reply", "")
+            summary = result.get("summary", "")
+            error_flag = result.get("success", 0)
+            agent_execution_time = result.get("agent_execution_time", None)
         
 
     # ---------- RUN Model ----------
@@ -106,10 +116,10 @@ def orchestrate(instruction, input_file=None, conv_id=None, chat_history=None):
             output_file
             # chat_history
         )
-        success = result.get("success", False)
+        error_flag = result.get("success", 0)
         obj_val = result.get("objective_value", None)
 
-        if success:
+        if error_flag==0:
             print("\n\nModel solved successfully! Objective value:", obj_val)
             reply = f"""
             Model Solved Successfully! \n
@@ -133,10 +143,14 @@ def orchestrate(instruction, input_file=None, conv_id=None, chat_history=None):
             )
 
         # Execute RAG
-        rag_reply, summary = query_rag(rag_instruction, 
-                                       chat_history, 
-                                       embedding_model, index, metadata
-                                       )
+        result = query_rag(instruction, 
+                            chat_history, 
+                            embedding_model, index, metadata
+                            )
+        rag_reply = result.get("reply", "")
+        summary = result.get("summary", "")
+        error_flag = result.get("success", 0)
+        agent_execution_time = result.get("agent_execution_time", None)
         
         # Execute Scenario
         enriched_instruction = f"Based on this retrieved information: '{summary}', execute this user request: {scenario_instruction}"
@@ -150,7 +164,10 @@ def orchestrate(instruction, input_file=None, conv_id=None, chat_history=None):
         reply = f"**Information Found:**\n{rag_reply}\n\n**Action Taken:**\n✅ Scenario updated: `{os.path.basename(output_file)}`"
         code = result.get("code")
         logs = result.get("logs")
-        scenario_execution_retries_count = result.get("retries", 0)
+        error_flag = result.get("success", 0)
+        code_execution_retries_count = result.get("retries", 0)
+        agent_execution_time2 = result.get("agent_execution_time", None)
+        agent_execution_time+=agent_execution_time2 if agent_execution_time and agent_execution_time2 else None
 
     else:
         raise ValueError(f"Unknown agent mode: {mode}")
@@ -167,15 +184,21 @@ def orchestrate(instruction, input_file=None, conv_id=None, chat_history=None):
         stored_reply += f"\n\nGenerated code:\n{code}"
     
 
+    db_formatted_timestamp = f"{timestamp[0:4]}-{timestamp[4:6]}-{timestamp[6:8]} {timestamp[9:11]}:{timestamp[11:13]}:{timestamp[13:15]}"
+    total_execution_time = round((end_time - pipeline_start_time), 2) if pipeline_start_time else 0.0
+    error_flag=error_flag if error_flag is not None else 0
+
     inserted_turn_id = log_turn(
         conv_id=conv_id,
         mode=mode,
         routing_reason=routing_reason,
-        timestamp=timestamp,
+        timestamp=db_formatted_timestamp,
         query=instruction,
         response=stored_reply,
-        execution_time=execution_time,
-        scenario_execution_retries_count=scenario_execution_retries_count if scenario_execution_retries_count else 0,
+        agent_execution_time=execution_time,
+        code_execution_retries_count=code_execution_retries_count if code_execution_retries_count else 0,
+        error_flag=error_flag,
+        total_execution_time=total_execution_time,
         output_file_name=os.path.basename(output_file) if output_file else None
     )
 
@@ -188,5 +211,6 @@ def orchestrate(instruction, input_file=None, conv_id=None, chat_history=None):
         "logs": logs if logs else None,
         "timestamp": timestamp,
         "turn_id": inserted_turn_id,
-        "execution_time": execution_time
+        "error_flag": error_flag,
+        "total_execution_time": total_execution_time
     }

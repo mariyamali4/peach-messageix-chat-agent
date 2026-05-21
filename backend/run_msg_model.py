@@ -1,6 +1,7 @@
 #run_msg_model.py
 import os
 import importlib.util
+import time
 import tempfile # For inserting logs in runtime - PENDING
 
 def solve_message_scenario(scenario_path, output_path):
@@ -10,6 +11,7 @@ def solve_message_scenario(scenario_path, output_path):
            output_path (str): Path where the solved scenario Excel file will be saved.
     Output: dict with keys "success" (bool) and "objective_value" (float or None)
     """
+    start_time = time.time()
 
     # PATH injection first
     spec = importlib.util.find_spec("gamspy_base")
@@ -57,11 +59,15 @@ def solve_message_scenario(scenario_path, output_path):
         obj_val = scenario.var("OBJ")["lvl"]
         scenario.to_excel(str(output_path))
 
-        return {"success": True, "objective_value": obj_val}
+        end_time = time.time()
+        execution_time = round((end_time - start_time), 2)
+        return {"error_flag": 0, "objective_value": obj_val, "agent_execution_time": execution_time}
 
     except Exception as e:
-        print("Error:", e)
-        return {"success": False, "objective_value": None}
+        print("Error in solve_message_scenario:", e)
+        end_time = time.time()
+        execution_time = round((end_time - start_time), 2)
+        return {"error_flag": 1, "objective_value": None, "agent_execution_time": execution_time}
     
     finally:
         if mp is not None:
@@ -69,9 +75,9 @@ def solve_message_scenario(scenario_path, output_path):
 
 # res= solve_message_scenario(r"D:\\lums-python-programming\\thesis\\message-ix\\westeros_baseline.xlsx", r"D:\\lums-python-programming\\thesis\\message-ix\\westeros_baseline_solved.xlsx")
 # if res:
-#     b=res.get("success", False)
+#     b=res.get("error_flag", 1)
 #     r=res.get("objective_value", None)
-#     if b:
+#     if b == 0:
 #         print("Model solved successfully! Objective value:", r)
 #     else:    
 #         print("Model solving failed.")

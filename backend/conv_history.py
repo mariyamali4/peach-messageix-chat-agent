@@ -1,3 +1,4 @@
+# conv_history.py
 import sqlite3, time
 import uuid
 from pathlib import Path
@@ -14,25 +15,28 @@ def init_db():
     try:
         with sqlite3.connect(DB_PATH) as conn:
             conn.execute("""
-                CREATE TABLE IF NOT EXISTS conversation_history_new (
+                CREATE TABLE IF NOT EXISTS conversation_history (
                     conv_id TEXT,
                     turn_id INTEGER PRIMARY KEY AUTOINCREMENT,
                     mode TEXT,
+                    routing_reason TEXT,
                     query TEXT NOT NULL,  
                     response TEXT,
                     output_file_name TEXT,
                     timestamp TEXT,
-                    routing_reason TEXT,
+                    agent_execution_time REAL,
                     response_feedback INTEGER,
-                    execution_time REAL 
+                    code_execution_retries_count INTEGER,
+                    total_execution_time REAL,
+                    error_flag INTEGER 
                 )
-            """)
+            """)    
         print("✅ Conversation history database initialized.")
     except Exception as e:
         print("❌ Error initializing database:", e)
 
 
-def log_turn(conv_id, mode, routing_reason, timestamp, query, response, execution_time, scenario_execution_retries_count, output_file_name=None):
+def log_turn(conv_id, mode, routing_reason, timestamp, query, response, agent_execution_time, code_execution_retries_count, error_flag, total_execution_time, output_file_name=None):
     ''' 
     Log a single turn in the conversation history.
     Inputs:
@@ -53,12 +57,14 @@ def log_turn(conv_id, mode, routing_reason, timestamp, query, response, executio
                 cursor = conn.cursor()
                 cursor.execute("""
                     INSERT INTO conversation_history
-                    (conv_id, mode, routing_reason, query, response, output_file_name, timestamp, execution_time, scenario_execution_retries_count)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (conv_id, mode, routing_reason, query, response, output_file_name, timestamp, execution_time, scenario_execution_retries_count))
+                    (conv_id, mode, routing_reason, query, response, output_file_name, timestamp, agent_execution_time, code_execution_retries_count, error_flag, total_execution_time)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (conv_id, mode, routing_reason, query, response, output_file_name, timestamp, agent_execution_time, code_execution_retries_count, error_flag, total_execution_time))
                 conn.commit()
                 
                 inserted_turn_id = cursor.lastrowid
+                print(f"✅ Logged turn {inserted_turn_id} for conversation {conv_id} in mode {mode}.")
+                print(f"🚨 ACTUAL DB PATH: {Path(DB_PATH).absolute()}") # ADD THIS LINE
                 return inserted_turn_id
             break  
         except sqlite3.OperationalError as e:

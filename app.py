@@ -1,10 +1,11 @@
 # app.py
 import streamlit as st
 import os
+import time
 import sqlite3
 import pandas as pd
 from backend.orchestrator_agent import orchestrate
-from backend.conv_history import new_conversation
+from backend.conv_history import new_conversation, DB_PATH
 
 def format_chat_history(raw_messages):
     """
@@ -60,7 +61,6 @@ with st.sidebar:
    # uploaded_file = st.file_uploader("📤 Upload scenario Excel file", type=["xlsx"], accept_multiple_files=True)
     uploaded_file = st.file_uploader("📤 Upload scenario Excel file", type=["xlsx"])
 
-  #  uploaded_file2 = st.file_uploader("📤 Upload scenario MESSAGEix file", type=["xlsx"])
     input_file_path, uploaded = None, False
 
     if uploaded_file:
@@ -72,16 +72,6 @@ with st.sidebar:
         with open(input_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
         st.success(f"✅ File uploaded: {uploaded_file.name}")
-
-    # if uploaded_file2:
-    #     uploaded = True
-    #     os.makedirs("data/history/msg_scenario_uploads", exist_ok=True)
-    #     os.makedirs("data/history/msg_scenario_outputs", exist_ok=True)
-
-    #     input_path2 = os.path.join("data/history/msg_scenario_uploads", uploaded_file2.name)
-    #     with open(input_path2, "wb") as f:
-    #         f.write(uploaded_file2.getbuffer())
-    #     st.success(f"✅ File uploaded: {uploaded_file2.name}")
 
 
     show_plots = st.sidebar.checkbox("Show Analytics Plots Options")
@@ -120,7 +110,8 @@ if "conv_id" not in st.session_state:
     st.session_state.conv_id = new_conversation()
 
 # Define DB Path
-db_path = os.path.join("data", "history", "conv_history.db") 
+#db_path = os.path.join("data", "history", "conv_history.db") 
+db_path = DB_PATH
 
 # ---------- 1. RENDER CHAT IN CHAT TAB ----------
 with tab_chat:
@@ -169,7 +160,7 @@ with tab_debug:
     try:                
         if os.path.exists(db_path):
             with sqlite3.connect(db_path) as conn:
-                df_history = pd.read_sql_query("SELECT * FROM conversation_history ORDER BY timestamp DESC", conn)
+                df_history = pd.read_sql_query("SELECT * FROM conversation_history ORDER BY turn_id DESC", conn)
                 st.dataframe(df_history, use_container_width=True)
         else:
             st.info("No database file found yet. Start a chat to create one!")
@@ -199,6 +190,7 @@ with tab_debug:
 user_input = st.chat_input("Type your instruction or question...")
 
 if user_input:
+    pipeline_start_time = time.time()
     st.session_state.messages.append({"role": "user", "content": user_input})
  
     with tab_chat:
@@ -216,7 +208,8 @@ if user_input:
                         instruction=user_input,
                         input_file=input_path if uploaded_file else None,
                         conv_id=st.session_state.conv_id,
-                        chat_history=clean_history
+                        chat_history=clean_history,
+                        pipeline_start_time=pipeline_start_time
                     )
 
                     # ---------- DISPLAY ----------
@@ -253,8 +246,9 @@ if user_input:
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                         )
                     
-                    if result.get("execution_time") is not None:
-                        st.caption(f"{result['execution_time']}s")
+                    if result.get("total_execution_time") is not None:
+                        st.caption(f"{result['total_execution_time']}s")
+                    
 
                     if result.get("summary"):
                         reply_data["summary"] = result["summary"]
@@ -269,7 +263,7 @@ if user_input:
                     reply_data["response_feedback"] = selected_feedback 
 
                     st.session_state.messages.append(reply_data)
-
+                    
                 except Exception as e:
                     error_message = f"❌ Error: (app.py) {e}"
                     st.error(error_message)

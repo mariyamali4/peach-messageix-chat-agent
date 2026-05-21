@@ -4,6 +4,7 @@ import numpy as np
 import re
 import os
 from groq import Groq
+import time
 
 from openpyxl import load_workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
@@ -50,7 +51,7 @@ def run_scenario_agent(instruction, chat_history, input_file, uploaded, output_f
         - logs (str), 
         - downloadable modified excel file saved to output_file path
     """
-    
+    start_time = time.time()
     logs = []
 
     df_input, target_sheet_name = None, None
@@ -217,8 +218,9 @@ def run_scenario_agent(instruction, chat_history, input_file, uploaded, output_f
 
             logs.append(f"✅ Overwrote '{target_sheet_name}' and saved to {output_file}")
 
-           # return {"success": True, "code": code, "logs": "\n".join(logs)}
-            return {"success": False, "code": code, "logs": "\n".join(logs), "retries": attempt}
+            end_time = time.time()
+            execution_time = round((end_time - start_time), 2)
+            return {"error_flag": 0, "code": code, "logs": "\n".join(logs), "retries": attempt, "agent_execution_time": execution_time}
 
         except Exception as e:
             logs.append(f"❌ Error executing code: {e}")
@@ -226,5 +228,6 @@ def run_scenario_agent(instruction, chat_history, input_file, uploaded, output_f
                 logs.append("🔁 Retrying with fix...")
                 code = generate_code(extra_context=str(e))
             else:
-              #  return {"success": False, "code": code, "logs": "\n".join(logs)}
-                return {"success": False, "code": code, "logs": "\n".join(logs), "retries": attempt}
+                end_time = time.time()
+                execution_time = round((end_time - start_time), 2)
+                return {"error_flag": 1, "code": code, "logs": "\n".join(logs), "retries": attempt, "agent_execution_time": execution_time}
