@@ -4,7 +4,7 @@
 1. **Edit MESSAGEix-style scenario Excel files** using natural-language instructions.
 2. **Query supporting documentation** (e.g. messaeg_ix documentation files, current policy documents) using a robust RAG system.
 
-Built with **Streamlit**, **FAISS**, **openai/gpt-oss-120b** and **llama-3.3-70b**, this demo shows how LLMs can assist climate modelers interactively.
+Built with **Streamlit**, **FAISS**, **GROQ Cloud LLM APIs**, this demo shows how LLMs can assist climate modelers interactively.
 
 ---
 
@@ -14,6 +14,7 @@ Built with **Streamlit**, **FAISS**, **openai/gpt-oss-120b** and **llama-3.3-70b
 |------|--------------|
 | **Scenario Editor** | Upload an Excel input file (e.g. technology cost data). Give an instruction, and the agent writes and executes Pandas code to modify the file safely, producing an updated version for download. |
 | **Document Q&A (RAG)** | Ask questions about your documentation (e.g. “what are the technologies in inv_cost sheet?”). Uses a simple docx/xlsx → chunks → embeddings → FAISS index → retriever → Gemini generator setup. |
+| **MESSAGEix Executor Agent** | Upload a scenario file. Give instructions to run the model, and the agent solves the model and returns the objective value and solved model file for download. |
 
 ---
 
@@ -27,17 +28,23 @@ project/
 ├── backend/
 │   ├── config/
 |   |    └── rag_config.py
+│   ├── analysis_core/
+│   |   ├── analysis_generator.py
+│   |   └── analysis_plots.py
 │   ├── rag_core/
 │   |   ├── retriever.py
 │   |   └── generator.py
 |   |
+|   ├── analysis_agent.py
 |   ├── conv_history.py
 |   ├── intent_detection.py
 |   ├── orchestrator_agent.py
 │   ├── rag_engine.py
+|   ├── run_msg_model.py
 │   └── scenario_editor.py
 │
 ├── data/
+│   ├── analysis_knowledgebase/
 │   ├── docs/
 |   └── history/
 |      ├── conv_history.db
@@ -80,15 +87,15 @@ project/
    pip install -r requirements.txt
    ```
 
-4. **Set your Google Gemini API key**
+4. **Set your GROW Clous API key**
    You can either:
    - Add it to your environment variables:
      ```bash
-     setx GEMINI_API_KEY1 "your_api_key_here"
+     setx GROQ_API_KEY1 "your_api_key_here"
      ```
    - Or create a `.env` file in the root:
      ```
-     GEMINI_API_KEY1=your_api_key_here
+     GROQ_API_KEY1=your_api_key_here
      ```
 
 ---
@@ -117,16 +124,7 @@ http://localhost:8501
 ---
 
 ## 📦 Dependencies
-
-- pandas
-- numpy
-- google-generativeai
-- sentence-transformers
-- python-docx
-- docx2txt
-- python-docx
-- streamlit
-- faiss-cpu
+> requirements.txt
 
 ---
 
@@ -139,10 +137,7 @@ Only `numpy` and `pandas` imports are whitelisted.
 
 ## 💡 Future Work
 
-- Add authentication
-- Coder Agent: Integration with MESSAGEix solver backend
 - Analysis Agent: Interpretation of model output
 - Automated evaluation pipeline
-- Editable visualization for scenario deltas
 
 ---
