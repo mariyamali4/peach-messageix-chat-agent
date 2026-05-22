@@ -64,7 +64,7 @@ def log_turn(conv_id, mode, routing_reason, timestamp, query, response, agent_ex
                 
                 inserted_turn_id = cursor.lastrowid
                 print(f"✅ Logged turn {inserted_turn_id} for conversation {conv_id} in mode {mode}.")
-                print(f"🚨 ACTUAL DB PATH: {Path(DB_PATH).absolute()}") # ADD THIS LINE
+                #print(f"🚨 ACTUAL DB PATH: {Path(DB_PATH).absolute()}") # ADD THIS LINE
                 return inserted_turn_id
             break  
         except sqlite3.OperationalError as e:

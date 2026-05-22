@@ -12,7 +12,6 @@ groq_api_key = os.environ.get("GROQ_API_KEY1")
 client = Groq(api_key = groq_api_key)
 
 
-
 def extract_json(text: str):
     text = text.strip()
     if text.startswith("```"):
@@ -65,6 +64,15 @@ def llm_route(user_input: str, chat_history: list = None):
 
         User: "analyse the uploaded scenario for me"
         Output: {{"selected_agent": "analysis", "reason": "User wants to get analysis of a message_ix scenario.", "sub_queries": null}}
+
+        User: "generate the selected plots"
+        Output: {{"selected_agent": "analysis", "reason": "User wants to generate plots for the scenario.", "sub_queries": null}}
+
+        User: "are emission trends rising after mid-century?"
+        Output: {{"selected_agent": "analysis", "reason": "User asks a specific trend question about the scenario.", "sub_queries": null}}
+
+        User: "which technology dominates the electricity mix by 2040?"
+        Output: {{"selected_agent": "analysis", "reason": "User asks a specific question about the scenario.", "sub_queries": null}}
 
         User: "solve this scenario"
         Output: {{"selected_agent": "run_model", "reason": "User wants to solve the scenario using message_ix model.", "sub_queries": null}}

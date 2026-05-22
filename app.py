@@ -83,6 +83,7 @@ with st.sidebar:
         'final energy residential commercial',
         'final energy transportation',
         'installed electricity capacity',
+        'co2 emission by demand sector',
         'co2 emission by energy supply',
         'emissions by pollutant energy',
         'emissions by pollutant industrial processes',
@@ -90,7 +91,7 @@ with st.sidebar:
         'total energy by fuel',
         'primary energy mix',
         'trade primary energy volumes',
-        'trade secondary energy volumes'
+        'trade secondary energy volumes',
         'resource extraction'
     ]
     if show_plots:
@@ -98,7 +99,7 @@ with st.sidebar:
             'Which plots do you want to draw?',
             plots
         )
-        'Selected Plots: ', plot_options
+        st.write('Selected Plots: ', plot_options)
 
 # ---------- SESSION SETUP ----------
 # Chat Memory
@@ -204,12 +205,14 @@ if user_input:
                     recent_raw_history = st.session_state.messages[max(0, chat_length-4):chat_length]   # Get the last 4 messages (2 user-assistant pairs) for context
                     clean_history = format_chat_history(recent_raw_history)
 
+                    plots_selected = plot_options if (show_plots and plot_options) else None
                     result = orchestrate(
                         instruction=user_input,
                         input_file=input_path if uploaded_file else None,
                         conv_id=st.session_state.conv_id,
                         chat_history=clean_history,
-                        pipeline_start_time=pipeline_start_time
+                        pipeline_start_time=pipeline_start_time,
+                        plot_options=plots_selected
                     )
 
                     # ---------- DISPLAY ----------
@@ -238,13 +241,41 @@ if user_input:
                         with st.expander("📜 Execution Logs"):
                             st.text(result["logs"])
 
+                    # if result.get("output_file"):
+                    #     st.download_button(
+                    #         "⬇️ Download Updated Scenario",
+                    #         data=open(result["output_file"], "rb"),
+                    #         file_name=os.path.basename(result["output_file"]),
+                    #         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    #     )
+
+
+
                     if result.get("output_file"):
-                        st.download_button(
-                            "⬇️ Download Updated Scenario",
-                            data=open(result["output_file"], "rb"),
-                            file_name=os.path.basename(result["output_file"]),
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        output_path = result["output_file"]
+                        file_name = os.path.basename(output_path)
+                        
+                        # Extract the extension to determine file type
+                        _, file_extension = os.path.splitext(file_name)
+                        file_extension = file_extension.lower()
+
+                        # Set appropriate label and mime type based on extension
+                        if file_extension == ".pdf":
+                            button_label = "⬇️ Download PDF Report"
+                            mime_type = "application/pdf"
+                        elif file_extension in [".xlsx", ".xls"]:
+                            button_label = "⬇️ Download Updated Scenario"
+                            mime_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+                        # Read and offer the file for download
+                        with open(output_path, "rb") as file_to_download:
+                            st.download_button(
+                                label=button_label,
+                                data=file_to_download,
+                                file_name=file_name,
+                                mime=mime_type
                         )
+
                     
                     if result.get("total_execution_time") is not None:
                         st.caption(f"{result['total_execution_time']}s")

@@ -78,7 +78,8 @@ def emission_kyto_gases(msg):
     ax.tick_params(axis='y', labelsize=13)
     ax.grid(alpha=0.3)
     plt.tight_layout()
-    plt.show()
+    #plt.show()
+    return fig
 
 
 ## 2. Electricity Generation Mix (Secondary Energy)
@@ -181,7 +182,7 @@ def final_energy_transportation():
     # return vars, colors, labels, title, ylabel, scale
 
 
-## 6. Electricity Capacity
+## 6. Installed Electricity Capacity
 def installed_electricity_capacity():
     vars_cap = [
         'Capacity|Electricity|Coal',
@@ -211,7 +212,7 @@ def installed_electricity_capacity():
 
 
 ## 7. CO2 Emissions by Demand Sector
-def co2_emissions_by_demand_sector():
+def co2_emissions_by_demand_sector(models, years):
     cats = ['Industry', 'Res & Commercial', 'Transportation']
     cat_colors = {'Industry': '#88E663', 'Res & Commercial': '#3986eb', 'Transportation': '#df5c5c'}
 
@@ -229,11 +230,11 @@ def co2_emissions_by_demand_sector():
     added, x = set(), 0
     year_centers, bar_positions, bar_labels = [], [], []
 
-    for yi, year in enumerate(YEARS):
+    for yi, year in enumerate(years):
         if yi > 0:
             x += gap_year
         pair_start = x
-        for mname, mdf in MODELS:
+        for mname, mdf in models:
             bottom = 0
             for cat in cats:
                 val = 0
@@ -255,7 +256,7 @@ def co2_emissions_by_demand_sector():
 
     ax.set_xticks(bar_positions)
     ax.set_xticklabels(bar_labels, fontsize=12)
-    for center, year in zip(year_centers, YEARS):
+    for center, year in zip(year_centers, years):
         ax.text(center, -0.09, str(year), transform=ax.get_xaxis_transform(),
                 ha='center', va='top', fontsize=14)
 
@@ -266,7 +267,8 @@ def co2_emissions_by_demand_sector():
     ax.legend(loc='upper center', ncol=3, fontsize=12,
             frameon=True, bbox_to_anchor=(0.5, 1.12))
     plt.tight_layout()
-    plt.show()
+    #plt.show()
+    return fig
 
 
 ## 8. CO2 Emissions by Energy Supply
@@ -495,9 +497,6 @@ def trade_secondary_energy_volumes():
         'Trade|Gross Import|Secondary Energy|Liquids|Coal|Volume':      'Import|Liq.Coal',
         'Trade|Gross Import|Secondary Energy|Liquids|Oil|Volume':       'Import|Liq.Oil',
     }
-
-    stacked_bar_comparison(vars_trade_SE, colors_trade_SE, labels_trade_SE,
-                        'Trade - Secondary Energy Volumes')
     return vars_trade_SE, colors_trade_SE, labels_trade_SE, "Trade - Secondary Energy Volumes", 'Energy (PJ)', 1000
     # return vars, colors, labels, title, ylabel, scale
 
@@ -530,11 +529,13 @@ def resource_extraction():
 
 
 PLOT_REGISTRY = {
+        'emission kyto gases':                  emission_kyto_gases,
         'electricity generation mix':           electricity_generation_mix,
         'final energy industry':                final_energy_industry,
         'final energy residential commercial':  final_energy_residential_commercial,
         'final energy transportation':          final_energy_transportation,
         'installed electricity capacity':       installed_electricity_capacity,
+        'co2 emission by demand sector':        co2_emissions_by_demand_sector,
         'co2 emission by energy supply':        co2_emission_by_energy_supply,
         'emissions by pollutant energy':        emissions_by_pollutant_energy,
         'emissions by pollutant industrial processes': emissions_by_pollutant_industrial_processes,
@@ -555,19 +556,25 @@ def plot_wrapper(plot_names, file_path, output_pdf='Analysis_Plots.pdf'):
     models = [('MSG', msg)]
     years = [2025, 2030, 2035, 2040, 2045, 2050, 2055, 2060, 2070]
 
-    if 'all' in plot_names:
+    if 'ALL' in plot_names:
         funcs = list(PLOT_REGISTRY.values())
     else:
         funcs = [PLOT_REGISTRY[name] for name in plot_names if name in PLOT_REGISTRY]
     
+    figures = []
     with PdfPages(output_pdf) as pdf:
         for func in funcs:
-            vars_, colors_, labels_, title, ylabel, scale = func()
-          #  print(f"{vars_},\n\n {colors_},\n\n {labels_},\n\n {title}, \n\n{ylabel},\n{scale}\n\n")
-
-            fig = stacked_bar_comparison(vars_, colors_, labels_, title, models, years, ylabel, scale)
+            if func.__name__ == 'emission_kyto_gases':
+                fig = func(msg)
+            elif func.__name__ == 'co2_emissions_by_demand_sector':
+                fig = func(models, years)
+            else:
+                vars_, colors_, labels_, title, ylabel, scale = func()
+                fig = stacked_bar_comparison(vars_, colors_, labels_, title, models, years, ylabel, scale)
+            figures.append(fig)
             pdf.savefig(fig, bbox_inches='tight')
-            plt.close(fig)
+           # plt.close(fig)
+    return figures
 
 
 # plot_names = ['resource extraction', 'total energy by fuel']        # coming from streamlit multiselect

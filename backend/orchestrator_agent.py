@@ -10,7 +10,7 @@ from backend.conv_history import init_db, log_turn
 from backend.intent_detection import get_intent
 from backend.scenario_editor import run_scenario_agent
 from backend.rag_engine import query_rag
-from backend.analysis_agent import generate_analysis
+from backend.analysis_agent import run_analysis_agent
 from backend.run_msg_model import solve_message_scenario
 
 # Cached load: only runs once when app starts
@@ -23,7 +23,7 @@ PKT = timezone(timedelta(hours=5))
 BASE_DIR = Path(__file__).resolve().parents[1]
 base_scenario_path = BASE_DIR / "data" / "docs" / "MESSAGEix-Pakistan-CurPol.xlsx"
 
-def orchestrate(instruction, input_file=None, conv_id=None, chat_history=None, pipeline_start_time=0.0):
+def orchestrate(instruction, input_file=None, conv_id=None, chat_history=None, pipeline_start_time=0.0, plot_options=None):
     """
     Central orchestration layer:
     - intent detection
@@ -42,9 +42,12 @@ def orchestrate(instruction, input_file=None, conv_id=None, chat_history=None, p
         from backend.conv_history import new_conversation
         conv_id = new_conversation()
 
-    routing = get_intent(instruction, chat_history)
-    mode = routing.get("selected_agent")    
-    routing_reason = routing.get("reason", "")      
+    if (plot_options and input_file) and not instruction.strip():
+        mode, routing_reason = "analysis", "Plot options provided without text query, assuming visual report intent"
+    else:
+        routing = get_intent(instruction, chat_history)
+        mode = routing.get("selected_agent")    
+        routing_reason = routing.get("reason", "")      
 
     # 1. Initialize empty variables for the Single Exit Point
     reply, summary, code, logs, output_file = "", None, None, None, None
@@ -70,7 +73,7 @@ def orchestrate(instruction, input_file=None, conv_id=None, chat_history=None, p
         reply = f"✅ Scenario updated: `{os.path.basename(output_file)}`"
         code = result.get("code")
         logs = result.get("logs")
-        error_flag = result.get("success", 0)
+        error_flag = result.get("error_flag", 0)
         agent_execution_time = result.get("agent_execution_time", None)
         code_execution_retries_count = result.get("retries") if result.get("retries") else 0
 
@@ -82,7 +85,7 @@ def orchestrate(instruction, input_file=None, conv_id=None, chat_history=None, p
                             )
         reply = result.get("reply", "")
         summary = result.get("summary", "")
-        error_flag = result.get("success", 0)
+        error_flag = result.get("error_flag", 0)
         agent_execution_time = result.get("agent_execution_time", None)
         
         
@@ -90,15 +93,19 @@ def orchestrate(instruction, input_file=None, conv_id=None, chat_history=None, p
     elif mode == "analysis":
         if input_file is None:
             reply = "No file attached for analysis"
+
         else:
-            result = generate_analysis(instruction, 
-                                   chat_history, 
-                                   input_file
+            result = run_analysis_agent(instruction, 
+                                        input_file,
+                                        timestamp,
+                                        chat_history, 
+                                        plots_list=plot_options
                                 )
             reply = result.get("reply", "")
             summary = result.get("summary", "")
-            error_flag = result.get("success", 0)
+            error_flag = result.get("error_flag", 0)
             agent_execution_time = result.get("agent_execution_time", None)
+            output_file = result.get("report", None)
         
 
     # ---------- RUN Model ----------
@@ -116,7 +123,7 @@ def orchestrate(instruction, input_file=None, conv_id=None, chat_history=None, p
             output_file
             # chat_history
         )
-        error_flag = result.get("success", 0)
+        error_flag = result.get("error_flag", 0)
         obj_val = result.get("objective_value", None)
 
         if error_flag==0:
@@ -149,7 +156,7 @@ def orchestrate(instruction, input_file=None, conv_id=None, chat_history=None, p
                             )
         rag_reply = result.get("reply", "")
         summary = result.get("summary", "")
-        error_flag = result.get("success", 0)
+        error_flag = result.get("error_flag", 0)
         agent_execution_time = result.get("agent_execution_time", None)
         
         # Execute Scenario
@@ -164,7 +171,7 @@ def orchestrate(instruction, input_file=None, conv_id=None, chat_history=None, p
         reply = f"**Information Found:**\n{rag_reply}\n\n**Action Taken:**\n✅ Scenario updated: `{os.path.basename(output_file)}`"
         code = result.get("code")
         logs = result.get("logs")
-        error_flag = result.get("success", 0)
+        error_flag = result.get("error_flag", 0)
         code_execution_retries_count = result.get("retries", 0)
         agent_execution_time2 = result.get("agent_execution_time", None)
         agent_execution_time+=agent_execution_time2 if agent_execution_time and agent_execution_time2 else None

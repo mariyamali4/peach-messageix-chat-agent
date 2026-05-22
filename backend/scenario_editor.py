@@ -141,7 +141,7 @@ def run_scenario_agent(instruction, chat_history, input_file, uploaded, output_f
     def generate_code(extra_context=None):
         context = prompt
         if extra_context:
-            context += f"\nFix the issue described here: {extra_context}"
+            context += f"\nPREVIOUS GENERATED PYTHON SCRIPT FAILED WITH THIS ERROR:\n`{extra_context}`\nPlease review the error and rewrite the code"
 
         completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
