@@ -1,20 +1,33 @@
-langchain
-langchain-community
-chromadb
-docx2txt
-python-docx
-google-generativeai
-streamlit
-faiss-cpu
-sentence-transformers
-groq
-jupyter-notebook-parser
-pyarrow
-openpyxl
-message-ix
-gamspy_base
-gamsapi
-ixmp4
-pyam
-xhtml2pdf
-markdown
+# --- Critical Core Constraints (Solves the Pipeline Loops) ---
+huggingface-hub==0.28.1
+sentence-transformers==3.0.1
+transformers>=4.41.0
+numpy>=1.24.0,<2.0.0
+pandas>=2.1.0,<2.2.0
+pyarrow>=15.0.0
+
+# --- Streamlit & Presentation ---
+streamlit>=1.35.0
+xhtml2pdf>=0.2.15
+markdown>=3.6
+
+# --- Data Parsers & Office formats ---
+openpyxl>=3.1.0
+python-docx>=1.1.2
+jupyter-notebook-parser>=0.1.4
+
+# --- IAM Modeling & GAMS Solvers ---
+gamsapi>=47.1.0
+gamspy_base>=0.1.0
+pyam-iamc>=2.2.0
+message-ix>=3.8.0
+
+# --- Vector Store & Retrieval ---
+faiss-cpu==1.8.0.post1
+
+# --- LLM Ecosystem & Verification ---
+groq>=0.9.0
+langchain>=0.2.0
+langchain-community>=0.2.0
+langchain-groq>=0.1.4
+ragas>=0.1.9
