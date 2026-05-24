@@ -248,22 +248,22 @@ def run_interpretation_layer(df, scenario_summary, user_query, chat_history=None
     # Step 3 - Synthesis
     analysis_report = synthesize(formatted_metrics, user_query, analysis_type_specific_task)
 
-    return analysis_report
+    return analysis_report, attempt
 
 
 
 
 # ------------------------------------------ LOCAL TESTING ----------------------------------------------------------------------------
-#import time
+# import time
 
-#user_query = "explain this scenario to me"
+# user_query = "explain this scenario to me"
 # input_file = r"D:\lums-python-programming\thesis\project\data\analysis-knowledgebase\MESSAGEix-Pakistan_baseline_2026-03-17--11-37.xlsx"
 # user_query = "what do the emission trends and technology trends look like in this scenario?"
 
 # start = time.time()
 # df = pd.read_excel(input_file)
 
-#from analysis_intake_layer import build_scenario_summary
+# from analysis_intake_layer import build_scenario_summary
 # data_summary = build_scenario_summary(input_file)
 # print(run_interpretation_layer(df, data_summary, user_query))
 

@@ -106,6 +106,7 @@ def orchestrate(instruction, input_file=None, conv_id=None, chat_history=None, p
             error_flag = result.get("error_flag", 0)
             agent_execution_time = result.get("agent_execution_time", None)
             output_file = result.get("report", None)
+            code_execution_retries_count = result.get("code_retries") if result.get("code_retries") else 0
         
 
     # ---------- RUN Model ----------
@@ -150,7 +151,7 @@ def orchestrate(instruction, input_file=None, conv_id=None, chat_history=None, p
             )
 
         # Execute RAG
-        result = query_rag(instruction, 
+        result = query_rag(rag_instruction, 
                             chat_history, 
                             embedding_model, index, metadata
                             )

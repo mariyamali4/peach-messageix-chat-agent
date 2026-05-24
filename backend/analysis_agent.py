@@ -42,7 +42,8 @@ def run_analysis_agent(user_query, input_file, timestamp=None, chat_history=None
                 "summary": None, 
                 "report": None, 
                 "error_flag": 1, 
-                "agent_execution_time": execution_time()
+                "agent_execution_time": execution_time(),
+                "code_retries": None
                 }
 
     analysis_type = get_analysis_type(user_query, plots_list)
@@ -58,6 +59,7 @@ def run_analysis_agent(user_query, input_file, timestamp=None, chat_history=None
                 "report": output_pdf,
                 "error_flag": 0,
                 "agent_execution_time": agent_execution_time,
+                "code_retries": None
             }
         except Exception as e:
             print("Error in visual_report generation:", e)
@@ -77,6 +79,7 @@ def run_analysis_agent(user_query, input_file, timestamp=None, chat_history=None
                 "report": None,
                 "error_flag": 0,
                 "agent_execution_time": agent_execution_time,
+                "code_retries": None
             }
         except Exception as e:
             print("Error in mini_report generation:", e)
@@ -87,7 +90,7 @@ def run_analysis_agent(user_query, input_file, timestamp=None, chat_history=None
         # If user asks a specific question, we still provide the scenario summary as context, but prompt the LLM to focus on directly answering the specific query.
         try:
             df, scenario_summary = build_scenario_summary(input_file)
-            analysis_report = run_interpretation_layer(df, scenario_summary, user_query)
+            analysis_report, code_retries = run_interpretation_layer(df, scenario_summary, user_query)
             report_summary = extract_summary(analysis_report)
             agent_execution_time = round((time.time() - start_time), 2)
             return {
@@ -96,6 +99,7 @@ def run_analysis_agent(user_query, input_file, timestamp=None, chat_history=None
                 "report": None,
                 "error_flag": 0,
                 "agent_execution_time": agent_execution_time,
+                "code_retries": code_retries
             }
         except Exception as e:
             print("Error in direct_answer generation:", e)
@@ -105,7 +109,7 @@ def run_analysis_agent(user_query, input_file, timestamp=None, chat_history=None
         # If user asks a specific question and selects plots, we still run the interpretation pipeline to get the analysis, then generate plots, and then compile everything into a PDF report.
         try:
             df, scenario_summary = build_scenario_summary(input_file)
-            analysis_report = run_interpretation_layer(df, scenario_summary, user_query)
+            analysis_report, code_retries = run_interpretation_layer(df, scenario_summary, user_query)
             report_summary = extract_summary(analysis_report)
 
             output_pdf=f'{output_file_path}/Analysis_Visual_Report_{timestamp}.pdf'
@@ -123,6 +127,7 @@ def run_analysis_agent(user_query, input_file, timestamp=None, chat_history=None
                 "report": output_pdf,
                 "error_flag": 0,
                 "agent_execution_time": agent_execution_time,
+                "code_retries": code_retries
             }
         except Exception as e:
             print("Error in visual_direct_report generation:", e)
@@ -151,6 +156,7 @@ def run_analysis_agent(user_query, input_file, timestamp=None, chat_history=None
                 "report": output_pdf,
                 "error_flag": 0,
                 "agent_execution_time": agent_execution_time,
+                "code_retries": None
             }
         except Exception as e:
             print("Error in visual_mini_report generation:", e)
@@ -162,7 +168,8 @@ def run_analysis_agent(user_query, input_file, timestamp=None, chat_history=None
                 "summary": None,
                 "report": None,
                 "error_flag": 1,
-                "agent_execution_time": None
+                "agent_execution_time": None,
+                "code_retries": None
             }
     
     

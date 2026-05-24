@@ -92,7 +92,7 @@ def run_scenario_agent(instruction, chat_history, input_file, uploaded, output_f
         - You are given a pandas DataFrame named `df`. 
         - The schema and sample rows of `df` are provided below. 
         - An excerpt of chat history is provided for additional context, in order to help with user's follow-up questions.
-        - If the instructions are not clear, or the required information is not available in the selected sheet, do not make assumptions, and ask the user for clarification.
+        - If the instructions are NOT clear, or the required information is NOT AVAILABLE in the selected sheet, DO NOT make assumptions, and ASK THE USER FOR CLARIFICATION.
 
         Schema:
         {list(df_input.columns)}
