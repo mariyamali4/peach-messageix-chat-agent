@@ -312,8 +312,6 @@ def emissions_by_pollutant_energy():
     colors_energy = {v: pollutant_colors[v.split('|')[1]] for v in vars_energy}
     labels_energy = {v: v.split('|')[1] for v in vars_energy}
 
-    # stacked_bar_comparison(vars_energy, colors_energy, labels_energy,
-    #                     'Energy Emissions by Pollutant', ylabel='Mt/yr', scale=1)
     return vars_energy, colors_energy, labels_energy, "Energy Emissions by Pollutant", 'Mt/yr', 1
     # return vars, colors, labels, title, ylabel, scale
 
@@ -335,8 +333,6 @@ def emissions_by_pollutant_industrial_processes():
     colors_indproc = {v: pollutant_colors[v.split('|')[1]] for v in vars_indproc}
     labels_indproc = {v: v.split('|')[1] for v in vars_indproc}
 
-    #stacked_bar_comparison(vars_indproc, colors_indproc, labels_indproc,
-    #                   'Industrial Process Emissions by Pollutant', ylabel='Mt/yr', scale=1)
     return vars_indproc, colors_indproc, labels_indproc, "Industrial Process Emissions by Pollutant", 'Mt/yr', 1
     # return vars, colors, labels, title, ylabel, scale
 
@@ -356,8 +352,6 @@ def emissions_by_pollutant_waste():
     colors_waste = {v: pollutant_colors[v.split('|')[1]] for v in vars_waste}
     labels_waste = {v: v.split('|')[1] for v in vars_waste}
 
-    # stacked_bar_comparison(vars_waste, colors_waste, labels_waste,
-    #                     'Waste Emissions by Pollutant', ylabel='Mt/yr', scale=1)
     return vars_waste, colors_waste, labels_waste, "Waste Emissions by Pollutant", 'Mt/yr', 1
     # return vars, colors, labels, title, ylabel, scale
     

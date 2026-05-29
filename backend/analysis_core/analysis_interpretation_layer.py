@@ -223,13 +223,13 @@ def run_interpretation_layer(df, scenario_summary, user_query, analysis_type, ch
     logs = []
     error_context = None
 
-    if analysis_type == "direct_answer":
+    if analysis_type in ("direct_answer", "visual_direct_report"):
         analysis_type_specific_task = """
             You have been given pre-computed metrics that directly answer the user's query. 
             Your job is to explain what these numbers mean in plain language.
         """
         
-    elif analysis_type == "mini_report":
+    elif analysis_type in ("mini_report", "visual_mini_report"):
         analysis_type_specific_task = """
             You have been given pre-computed metrics covering all variable families in the scenario.
             Explain the scenario clearly, highlighting key trends and insights across all families.

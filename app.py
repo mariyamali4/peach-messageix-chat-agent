@@ -7,6 +7,15 @@ import pandas as pd
 from backend.orchestrator_agent import orchestrate
 from backend.conv_history import new_conversation, DB_PATH
 
+import base64
+
+def show_pdf_inline(pdf_path):
+    with open(pdf_path, "rb") as f:
+        base64_pdf = base64.b64encode(f.read()).decode("utf-8")
+    
+    pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="800px" type="application/pdf"></iframe>'
+    st.markdown(pdf_display, unsafe_allow_html=True)
+
 def format_chat_history(raw_messages):
     """
     Transforms the full Streamlit UI history into a lightweight payload for the LLM.
@@ -241,15 +250,7 @@ if user_input:
                         with st.expander("📜 Execution Logs"):
                             st.text(result["logs"])
 
-                    # if result.get("output_file"):
-                    #     st.download_button(
-                    #         "⬇️ Download Updated Scenario",
-                    #         data=open(result["output_file"], "rb"),
-                    #         file_name=os.path.basename(result["output_file"]),
-                    #         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    #     )
-
-
+       
 
                     if result.get("output_file"):
                         output_path = result["output_file"]
@@ -261,6 +262,7 @@ if user_input:
 
                         # Set appropriate label and mime type based on extension
                         if file_extension == ".pdf":
+                            show_pdf_inline(result["output_file"])
                             button_label = "⬇️ Download PDF Report"
                             mime_type = "application/pdf"
                         elif file_extension in [".xlsx", ".xls"]:
