@@ -551,15 +551,12 @@ def plot_wrapper(plot_names, file_path, output_pdf='Analysis_Plots.pdf'):
     _raw = pd.read_excel(file_path)
     _raw.columns = _raw.columns.astype(str)
     _raw = _raw.loc[:, ~_raw.columns.str.lower().str.startswith('unnamed:')]
-    _raw = _raw.drop_duplicates()
-
-    # normalize to lowercase to match what pyam expects internally
-    _raw.columns = _raw.columns.str.lower()
 
     msg = pyam.IamDataFrame(_raw)
     models = [('MSG', msg)]
     years = [2025, 2030, 2035, 2040, 2045, 2050, 2055, 2060, 2070]
 
+    
 
     if 'ALL' in plot_names:
         funcs = list(PLOT_REGISTRY.values())
