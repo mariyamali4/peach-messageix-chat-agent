@@ -113,6 +113,7 @@ def run_scenario_agent(instruction, chat_history, input_file, uploaded, output_f
         3. Identify technologies or categories by name/ID — NEVER by float value matching.
         4. Scope → aggregate → modify (in that order).
         5. Use vectorized operations only (no loops, no `.apply`).
+        6. If the query asks you to make edits based on political, policy, or economic conditions, fetch the relevant information from the LLM knowledge in the form of coding conditions, and map it to the data based on string matching with the relevant columns. Do NOT make assumptions about the data that aren't explicitly supported by the instruction or the provided context/schema. If in doubt, ask the user for clarification instead of guessing.
 
         
         `CODING RULES`:
@@ -196,14 +197,11 @@ def run_scenario_agent(instruction, chat_history, input_file, uploaded, output_f
                 raise ValueError("No valid DataFrame 'df' produced.")
 
             # --- Saving the edited sheet to the output Excel file, overwriting the target sheet ---
-            # 1. Loading the existing workbook
             template_wb = load_workbook(input_file)
-            
-            # 2. Get the specific sheet (this preserves its position in the tab order)
             if target_sheet_name in template_wb.sheetnames:
                 ws = template_wb[target_sheet_name]
                 
-                # 3. Clear the existing content (delete_rows from 1 to max_row ensures we don't leave old data behind)
+                # Clear the existing content (delete_rows from 1 to max_row ensures we don't leave old data behind)
                 ws.delete_rows(1, ws.max_row)
             else:
                 # Edge case: If it's a brand new sheet, it will go to the end

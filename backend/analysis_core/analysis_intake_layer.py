@@ -77,15 +77,18 @@ def aggregate(root_families: dict, year_cols: list) -> dict:
         mid_century = round(totals[2050], 3) if 2050 in totals.index else None
 
         # Market shares in the final year — group by second pipe segment (secondary family level)
-        family_df = family_df.copy()
-        family_df["_sub"] = family_df["Variable"].apply(
-            lambda var: var.split("|")[1].strip() if "|" in var else var
+        # Only rows with at least one pipe belong in market share grouping
+        share_df = family_df[family_df["Variable"].str.contains("|", regex=False)].copy()
+        share_df["_sub"] = share_df["Variable"].apply(
+            lambda var: var.split("|")[1].strip()
         )
-        sub_totals = family_df.groupby("_sub")[last_year].sum().sort_values(ascending=False)
+        sub_totals = share_df.groupby("_sub")[last_year].sum().sort_values(ascending=False)
         total_for_share = sub_totals.sum()
 
         market_shares = {}
-        if total_for_share != 0:
+        if abs(total_for_share) < 1e-6:
+            market_shares = {}
+        else:
             for sub, val in sub_totals.items():
                 share = round(val / total_for_share * 100, 2)
                 if share > 0.01:
@@ -116,6 +119,7 @@ def build_scenario_summary(input_path) -> dict:
     Output: dict with 2 keys: metadata: of full df, families_summaries: summary stats for each root variable family
     """
     df = pd.read_excel(input_path)
+    df.drop_duplicates(subset=["Variable", "Region", "Scenario", "Unit"], inplace=True)
 
     # Ensure year columns are int (they may be read as strings from the input_file)
     df.columns = [int(c) if str(c).isdigit() else c for c in df.columns]

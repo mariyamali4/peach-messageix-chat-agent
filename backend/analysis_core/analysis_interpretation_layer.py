@@ -31,10 +31,13 @@ def research_director(scenario_summary, user_query, chat_history=None):
         You are a data scientist acting as a research director who analyzes an IAM (Integrated Assessment Model) energy scenario, 
         and provides high-level guidance on which metrics to compute. 
     
-    
     `Task:`
-        You have been given a compact summary of the scenario and a user query.Your job is to identify the key variables and trends that are 
-        relevant to the user's query and write Python code to calculate the relevant metrics, which will be executed against the raw DataFrame.
+        - You have been given a compact summary of the scenario and a user query. 
+        - Your job is to identify the key variables and trends that are relevant to the user's query and write Python code to 
+        calculate the relevant metrics, which will be executed against the raw DataFrame.
+        - The scenario summary already contains pre-computed metrics per family — use those directly where possible, and only query 
+        the raw df for specific variables the summary does not cleanly provide.
+
 
     `Context:`
         SCENARIO SUMMARY:
@@ -48,21 +51,35 @@ def research_director(scenario_summary, user_query, chat_history=None):
 
     `RULES:`
         - You have access to a pandas DataFrame called `df` with columns: {YEAR_COLS} + ['Model', 'Region', 'Scenario', 'Unit', 'Variable']
-        - You may only use pandas and numpy
+        - You can only use pandas and numpy
+        - ALWAYS exclude Region == 'World' before any computation: df_pak = df[df["Region"] != "World"]
         - IAMC variables are hierarchical (e.g., 'Emissions|CO2'). Do NOT assume exact aggregate rows like 'Emissions' or 'Capacity' exist. 
-        - To get totals, filter using `df["Variable"].str.startswith("Emissions")` and then sum the results across the year columns.
+        - When filtering for a family, ALWAYS use the pipe-guarded pattern to avoid matching variables that share the same prefix:
+          (df_pak["Variable"] == family_name) | (df_pak["Variable"].str.startswith(family_name + "|"))
+        - To get a family's top-level value, compute depth as Variable.str.count("|") and select only rows at the minimum depth
         - Store your final results in a dict called `results`
-        - Do not import anything, do not print anything, do not write to disk
-        - Return ONLY the Python code, no explanation, no markdown backticks
 
-    `Example output:`
-        # Safely get total CO2 emissions by summing sub-variables
-        co2_df = df[df["Variable"].str.startswith("Emissions|CO2")]
-        co2_totals = co2_df[{YEAR_COLS}].sum(axis=0)
+    `CONSTRAINTS:`
+        - Do not import anything, do not print anything, do not write to disk.
+        - Return ONLY the Python code, no explanation, no markdown backticks.      
+        
+
+    `Example outputs:`
+        # Step 1 — exclude World to avoid double-counting
+        df_pak = df[df["Region"] != "World"]
+        
+        # Step 2 — pipe-guarded family filter, shallowest depth only
+        fam = df_pak[(df_pak["Variable"] == "Emissions|CO2") | 
+                     (df_pak["Variable"].str.startswith("Emissions|CO2|"))].copy()
+        fam["_depth"] = fam["Variable"].str.count("|")
+        top = fam[fam["_depth"] == fam["_depth"].min()]
+        
+        # Step 3 — compute only what the scenario summary does not already provide
+        totals = top[[2025, 2030, 2035, 2040, 2045, 2050, 2055, 2060, 2070]].sum(axis=0)
         
         results = {{
-            "co2_2050": float(co2_totals[2050]),
-            "co2_trend": co2_totals.tolist()
+            "co2_2025": float(totals[2025]),
+            "co2_2070": float(totals[2070]),
         }}
 
     `OUTPUT FORMAT`:
@@ -74,6 +91,7 @@ def research_director(scenario_summary, user_query, chat_history=None):
     try:
         completion = client.chat.completions.create(
             model="openai/gpt-oss-120b",
+           # model="llama-3.3-70b-versatile",
             messages=[{"role": "user", "content": prompt}]
         )
         return completion.choices[0].message.content.strip()
@@ -91,10 +109,10 @@ def run_code_sandbox(code, df):
     """
     Executes the Research Director's code against the raw DataFrame.
     Inputs: 
-    - code (str), 
-    - df (DataFrame)
+        - code (str), 
+        - df (DataFrame)
     Output:
-    - results (dict) — the computed metrics that will be passed to the synthesis LLM
+        - results (dict) — the computed metrics that will be passed to the synthesis LLM
     """
     # Strip markdown fences if the LLM ignored instructions
     code = re.sub(r"```(?:python)?|```", "", code).strip()
@@ -135,8 +153,7 @@ def run_code_sandbox(code, df):
 # STEP 3 — SYNTHESIS
 # --------------------------------------------------------------------------------------
 
-def synthesize(computed_results, user_query, 
-               analysis_type_specific_task ="Explaining the scenario, highlighting things like key trends and insights"):
+def synthesize(computed_results, scenario_summary, user_query, analysis_type_specific_task = None):
     """
     Second LLM call. Receives only the deterministically computed metrics.
     Focuses purely on narrative — no data processing here.
@@ -155,6 +172,9 @@ def synthesize(computed_results, user_query,
     `Context:`
         USER QUERY:
         {user_query}
+
+        SCENARIO SUMMARY (pre-computed metrics):
+        {scenario_summary}
 
         COMPUTED METRICS:
         {computed_results}
@@ -181,7 +201,7 @@ def synthesize(computed_results, user_query,
 # interpretation_layer wrapper
 # --------------------------------------------------------------------------------------
 
-def run_interpretation_layer(df, scenario_summary, user_query, chat_history=None, max_retries=3):
+def run_interpretation_layer(df, scenario_summary, user_query, analysis_type, chat_history=None, max_retries=3):
     """
     Research Director → Data Manipulation → Synthesis
     Inputs:
@@ -189,21 +209,34 @@ def run_interpretation_layer(df, scenario_summary, user_query, chat_history=None
         - scenario_summary (str): the compact JSON summary of the scenario for LLM context generated by intake layer
         - user_query (str): the user's natural language query
         - chat_history (list): optional list of previous user and assistant messages for context
+        - analysis_type (str): the type of analysis being performed, which influences the LLM prompts
         - max_retries (int): number of retries for self-healing code generation
     Output:
         - analysis_report (str): the final plain-language analysis to return to the user
 
     Self-healing pipeline:
-    1. Research Director identifies relevant metrics and returns code (loops on failure)
-    2. Code is executed safely against the raw DataFrame in a sandbox
-    3. On error, the traceback message is fed back to the LLM to auto-correct
-    4. Synthesis LLM explains the final verified results in plain language
+        1. Research Director identifies relevant metrics and returns code (loops on failure)
+        2. Code is executed safely against the raw DataFrame in a sandbox
+        3. On error, the traceback message is fed back to the LLM to auto-correct
+        4. Synthesis LLM explains the final verified results in plain language
     """
     logs = []
     error_context = None
 
-    # analysis_type = direct-answer
-    analysis_type_specific_task = "You have been given pre-computed metrics that directly answer the user's query. Your job is to explain what these numbers mean in plain language."
+    if analysis_type == "direct_answer":
+        analysis_type_specific_task = """
+            You have been given pre-computed metrics that directly answer the user's query. 
+            Your job is to explain what these numbers mean in plain language.
+        """
+        
+    elif analysis_type == "mini_report":
+        analysis_type_specific_task = """
+            You have been given pre-computed metrics covering all variable families in the scenario.
+            Explain the scenario clearly, highlighting key trends and insights across all families.
+        """
+
+    # Then pass the right query to research_director:
+    code = research_director(scenario_summary, user_query, chat_history)
 
     # Steps 1 & 2 — Self-healing code generation and execution loop
     for attempt in range(max_retries + 1):
@@ -245,8 +278,15 @@ def run_interpretation_layer(df, scenario_summary, user_query, chat_history=None
     print("\n".join(logs))  
     formatted_metrics = json.dumps(computed_results, indent=2)
 
+
+
     # Step 3 - Synthesis
-    analysis_report = synthesize(formatted_metrics, user_query, analysis_type_specific_task)
+    summary_for_synthesis = json.loads(scenario_summary)
+    for family in summary_for_synthesis.get("families_summaries", {}).values():
+        family.pop("total_volume", None)
+    scenario_summary2 = json.dumps(summary_for_synthesis, indent=2)
+
+    analysis_report = synthesize(formatted_metrics, scenario_summary2, user_query, analysis_type_specific_task)
 
     return analysis_report, attempt
 

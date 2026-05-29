@@ -1,0 +1,9 @@
+Defaulting to user installation because normal site-packages is not writeable
+Collecting faiss-cpu
+  Downloading faiss_cpu-1.14.2-cp311-cp311-win_amd64.whl.metadata (7.8 kB)
+Collecting numpy>=1.25 (from faiss-cpu)
+  Downloading numpy-2.4.6-cp311-cp311-win_amd64.whl.metadata (6.6 kB)
+Collecting packaging (from faiss-cpu)
+  Downloading packaging-26.2-py3-none-any.whl.metadata (3.5 kB)
+Downloading faiss_cpu-1.14.2-cp311-cp311-win_amd64.whl (16.1 MB)
+   ----------------                         6.5/16.1 MB 45.0 kB/s eta 0:03:35

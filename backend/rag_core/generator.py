@@ -37,8 +37,7 @@ def generate_answer(query, chat_history, context, docTitles, llm_model_name="ope
     '''
   
     prompt = f"""
-        `Role`:
-        You are a helpful assistant specialized in climate scenario modeling.
+        `Role`: You are a helpful assistant specialized in climate scenario modeling.
 
         `Task`:
         - Use only the provided context to answer the user’s question as precisely as possible. Refrain from making the response very elaborate, unless explicitly requested.
@@ -87,9 +86,3 @@ def generate_answer(query, chat_history, context, docTitles, llm_model_name="ope
     summary = extract_summary(response)
 
     return response, summary
-
-
-    # Iterate over the response chunks and print/process them as they arrive, when stream = True in completion creation
-    # for chunk in chat_completion:
-    #     print(chunk.choices[0].delta.content or "", end="")
-    # print("\n") # Add a final newline for clean output

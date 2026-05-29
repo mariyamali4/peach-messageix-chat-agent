@@ -65,32 +65,12 @@ def run_analysis_agent(user_query, input_file, timestamp=None, chat_history=None
             print("Error in visual_report generation:", e)
             return error_response("❌ Failed to generate visual_report.")
         
-
-    elif analysis_type == "mini_report":
-        # If user wants a general analysis, we provide the entire scenario summary as context, and ask for broad insights, trends, and explanations.
-        try:
-            _, scenario_summary = build_scenario_summary(input_file)
-            analysis_report = synthesize(scenario_summary, user_query)
-            report_summary = extract_summary(analysis_report)
-            agent_execution_time = round((time.time() - start_time), 2)
-            return {
-                "reply": analysis_report,
-                "summary": report_summary,
-                "report": None,
-                "error_flag": 0,
-                "agent_execution_time": agent_execution_time,
-                "code_retries": None
-            }
-        except Exception as e:
-            print("Error in mini_report generation:", e)
-            return error_response("❌ Failed to generate mini_report.")
         
 
-    elif analysis_type == "direct_answer":
-        # If user asks a specific question, we still provide the scenario summary as context, but prompt the LLM to focus on directly answering the specific query.
+    elif analysis_type in ("direct_answer", "mini_report"):
         try:
             df, scenario_summary = build_scenario_summary(input_file)
-            analysis_report, code_retries = run_interpretation_layer(df, scenario_summary, user_query)
+            analysis_report, code_retries = run_interpretation_layer(df, scenario_summary, user_query, analysis_type)
             report_summary = extract_summary(analysis_report)
             agent_execution_time = round((time.time() - start_time), 2)
             return {
@@ -102,14 +82,14 @@ def run_analysis_agent(user_query, input_file, timestamp=None, chat_history=None
                 "code_retries": code_retries
             }
         except Exception as e:
-            print("Error in direct_answer generation:", e)
-            return error_response("❌ Failed to generate direct_answer.")
+            print(f"Error in {analysis_type} generation:", e)
+            return error_response(f"❌ Failed to generate {analysis_type}.")
 
-    elif analysis_type == "visual_direct_report":
-        # If user asks a specific question and selects plots, we still run the interpretation pipeline to get the analysis, then generate plots, and then compile everything into a PDF report.
+    elif analysis_type in ("visual_direct_report", "visual_mini_report"):
+        # If analysis + selects plots, we run the interpretation pipeline to get the analysis, then generate plots, and then compile everything into a PDF report.
         try:
             df, scenario_summary = build_scenario_summary(input_file)
-            analysis_report, code_retries = run_interpretation_layer(df, scenario_summary, user_query)
+            analysis_report, code_retries = run_interpretation_layer(df, scenario_summary, user_query, analysis_type)
             report_summary = extract_summary(analysis_report)
 
             output_pdf=f'{output_file_path}/Analysis_Visual_Report_{timestamp}.pdf'
@@ -130,37 +110,9 @@ def run_analysis_agent(user_query, input_file, timestamp=None, chat_history=None
                 "code_retries": code_retries
             }
         except Exception as e:
-            print("Error in visual_direct_report generation:", e)
-            return error_response("❌ Failed to generate visual_direct_report.")
+            print(f"Error in {analysis_type} generation:", e)
+            return error_response(f"❌ Failed to generate {analysis_type}.")
     
-
-    elif analysis_type == "visual_mini_report":
-        # If user asks a general question and selects plots, we still run the synthesize function to get the analysis, then generate plots, and then compile everything into a PDF report.
-        try:
-            _, scenario_summary = build_scenario_summary(input_file)
-            analysis_report = synthesize(scenario_summary, user_query)
-            report_summary = extract_summary(analysis_report)
-
-            output_pdf=f'{output_file_path}/Analysis_Visual_Report_{timestamp}.pdf'
-            figures_list = plot_wrapper(plots_list, input_file, "temp-plots.pdf")
-            build_pdf_report(analysis_report, figures_list, output_pdf)
-
-            # Closing the figures to free up memory 
-            for fig in figures_list:
-                plt.close(fig)
-
-            agent_execution_time = round((time.time() - start_time), 2)
-            return {
-                "reply": analysis_report,
-                "summary": report_summary,
-                "report": output_pdf,
-                "error_flag": 0,
-                "agent_execution_time": agent_execution_time,
-                "code_retries": None
-            }
-        except Exception as e:
-            print("Error in visual_mini_report generation:", e)
-            return error_response("❌ Failed to generate visual_mini_report.")
 
     else:
         return {
