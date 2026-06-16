@@ -73,6 +73,8 @@ def solve_message_scenario(scenario_path, output_path):
         if mp is not None:
             mp.close_db()
 
+
+
 # res= solve_message_scenario(r"D:\\lums-python-programming\\thesis\\message-ix\\westeros_baseline.xlsx", r"D:\\lums-python-programming\\thesis\\message-ix\\westeros_baseline_solved.xlsx")
 # if res:
 #     b=res.get("error_flag", 1)
