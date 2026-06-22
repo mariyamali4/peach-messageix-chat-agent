@@ -138,7 +138,10 @@ def orchestrate(instruction, input_file=None, conv_id=None, chat_history=None, p
             Solved Scenario File: `{os.path.basename(output_file)}`
             """
         else:
-            reply = f"❌ Model run failed. Check logs for details."
+          #  reply = f"❌ Model run failed. Check logs for details."
+            output_file = None
+            error_detail = result.get("error_detail", "No detail captured")
+            reply = f"❌ Model run failed: {error_detail}"
 
 
     # ---------- MULTI-INTENT (RAG -> SCENARIO) ----------

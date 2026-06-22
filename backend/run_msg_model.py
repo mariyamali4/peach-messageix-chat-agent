@@ -44,7 +44,7 @@ def solve_message_scenario(scenario_path, output_path):
     import ixmp
     import message_ix
     
-    mp = None
+    mp, obj_val = None, None
     try:
         mp = ixmp.Platform(
             backend="jdbc",
@@ -90,11 +90,17 @@ def solve_message_scenario(scenario_path, output_path):
         print("Error in solve_message_scenario:", e)
         end_time = time.time()
         execution_time = round((end_time - start_time), 2)
+        # return {
+        #         "error_flag": 1, 
+        #         "objective_value": obj_val if obj_val is not None else None, 
+        #         "agent_execution_time": execution_time
+        #         }
         return {
-                "error_flag": 1, 
-                "objective_value": obj_val if obj_val is not None else None, 
-                "agent_execution_time": execution_time
-                }
+            "error_flag": 1,
+            "objective_value": None,
+            "error_detail": str(e),          
+            "agent_execution_time": round(end_time - start_time, 2)
+        }
     
     finally:
         if mp is not None:
