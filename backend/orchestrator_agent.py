@@ -56,10 +56,13 @@ def orchestrate(instruction, input_file=None, conv_id=None, chat_history=None, p
     if mode == "scenario_editor":
         if input_file is None:
             input_file = base_scenario_path
-        output_file = os.path.join(
-                "data/history/scenario_editor_outputs",
-                os.path.basename(input_file).replace(".xlsx", f"-updated-{timestamp}.xlsx")
-                )        
+        # output_file = os.path.join(
+        #         "data/history/scenario_editor_outputs",
+        #         os.path.basename(input_file).replace(".xlsx", f"-updated-{timestamp}.xlsx")
+        #         ) 
+        output_file = str(BASE_DIR / "data" / "history" / "scenario_editor_outputs" / 
+                            os.path.basename(str(input_file)).replace(".xlsx", f"-updated-{timestamp}.xlsx")
+                        )        
         
         result = run_scenario_agent(
             instruction, 
@@ -114,10 +117,14 @@ def orchestrate(instruction, input_file=None, conv_id=None, chat_history=None, p
         if input_file is None:
             input_file = base_scenario_path
             print("No input file provided for model run, using default:", input_file)
-        output_file = os.path.join(
-                "data/history/msg_scenario_outputs",
-                os.path.basename(input_file).replace(".xlsx", f"-updated-{timestamp}.xlsx")
-                )        
+        # output_file = os.path.join(
+        #         "data/history/msg_scenario_outputs",
+        #         os.path.basename(input_file).replace(".xlsx", f"-updated-{timestamp}.xlsx")
+        #         )     
+
+        output_file = str(BASE_DIR / "data" / "history" / "msg_scenario_outputs" / 
+                            os.path.basename(str(input_file)).replace(".xlsx", f"-updated-{timestamp}.xlsx")
+                        )   
         
         result = solve_message_scenario(
             input_file,
@@ -145,10 +152,13 @@ def orchestrate(instruction, input_file=None, conv_id=None, chat_history=None, p
         scenario_instruction = sub_queries.get("scenario", instruction)
         
         input_file = input_file or base_scenario_path
-        output_file = os.path.join(
-                "data/history/scenario_editor_outputs",
-                os.path.basename(input_file).replace(".xlsx", f"-updated-{timestamp}.xlsx")
-            )
+        # output_file = os.path.join(
+        #         "data/history/scenario_editor_outputs",
+        #         os.path.basename(input_file).replace(".xlsx", f"-updated-{timestamp}.xlsx")
+        #         ) 
+        output_file = str(BASE_DIR / "data" / "history" / "scenario_editor_outputs" / 
+                            os.path.basename(str(input_file)).replace(".xlsx", f"-updated-{timestamp}.xlsx")
+                        )  
 
         # Execute RAG
         result = query_rag(rag_instruction, 
