@@ -78,6 +78,8 @@ def solve_message_scenario(scenario_path, output_path):
         scenario.solve(case=case_name)
         
         obj_val = scenario.var("OBJ")["lvl"]
+
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)  # making sure the output directory exists
         scenario.to_excel(str(output_path))
 
         end_time = time.time()

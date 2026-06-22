@@ -59,6 +59,11 @@ tab_chat, tab_debug = st.tabs(["💬 Chat", "🛠️ Debug Dashboard"])
 
 with st.sidebar:
     st.header("Uploads")
+
+    os.makedirs("data/history/scenario_uploads", exist_ok=True)
+    os.makedirs("data/history/scenario_editor_outputs", exist_ok=True)
+    os.makedirs("data/history/msg_scenario_outputs", exist_ok=True)
+
    # uploaded_file = st.file_uploader("📤 Upload scenario Excel file", type=["xlsx"], accept_multiple_files=True)
     uploaded_file = st.file_uploader("📤 Upload scenario Excel file", type=["xlsx"])
 
@@ -66,10 +71,6 @@ with st.sidebar:
 
     if uploaded_file:
         uploaded = True
-        os.makedirs("data/history/scenario_editor_uploads", exist_ok=True)
-        os.makedirs("data/history/scenario_editor_outputs", exist_ok=True)
-        os.makedirs("data/history/msg_scenario_outputs", exist_ok=True)
-
         input_path = os.path.join("data/history/scenario_uploads", uploaded_file.name)
         with open(input_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
