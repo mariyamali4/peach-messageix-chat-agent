@@ -2,7 +2,9 @@
 import os
 import importlib.util
 import time
-import tempfile # For inserting logs in runtime - PENDING
+
+from pathlib import Path
+import jpype
 
 def solve_message_scenario(scenario_path, output_path):
     """
@@ -20,16 +22,35 @@ def solve_message_scenario(scenario_path, output_path):
         os.environ["PATH"] = gams_dir + os.pathsep + os.environ.get("PATH", "")
         os.environ["GAMS_PATH"] = gams_dir
         os.environ["GAMSDIR"] = gams_dir
-    
-    with tempfile.TemporaryDirectory() as temp_dir:
-        log_path = os.path.join(temp_dir, "gams_output.log")
+    else:
+        print("WARNING: gamspy_base not found. GAMS path not set.")
+
+
+    # JVM detection 
+    if not os.environ.get("JAVA_HOME"):
+        try:
+            jvm_path = jpype.getDefaultJVMPath()
+            os.environ["JAVA_HOME"] = os.path.dirname(os.path.dirname(jvm_path))
+            print(f"JAVA_HOME set to: {os.environ['JAVA_HOME']}")
+        except Exception as e:
+            print(f"JVM detection failed: {e}")
+
+    # HSQLDB path — self-contained inside /tmp/ 
+    # /tmp/ is writable on Streamlit Cloud.
+    ixmp_db_path = Path("/tmp/ixmp_db/default")
+    ixmp_db_path.parent.mkdir(parents=True, exist_ok=True)
+
 
     import ixmp
     import message_ix
     
     mp = None
     try:
-        mp = ixmp.Platform()
+        mp = ixmp.Platform(
+            backend="jdbc",
+            driver="hsqldb",
+            path=str(ixmp_db_path)
+        )
         print("mp connected:", mp)
 
         # Create a clean throwaway scenario — no cloning from existing
