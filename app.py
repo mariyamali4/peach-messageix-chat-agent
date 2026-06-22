@@ -68,6 +68,7 @@ with st.sidebar:
         uploaded = True
         os.makedirs("data/history/scenario_editor_uploads", exist_ok=True)
         os.makedirs("data/history/scenario_editor_outputs", exist_ok=True)
+        os.makedirs("data/history/msg_scenario_outputs", exist_ok=True)
 
         input_path = os.path.join("data/history/scenario_uploads", uploaded_file.name)
         with open(input_path, "wb") as f:
